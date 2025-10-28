@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MAMMOCARE - AI-Powered Breast Cancer Detection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+  /* Cleaned and expanded CSS for clarity and to prevent linter errors */
+  body{
+    font-family:"Space Grotesk",sans-serif;
+    background:linear-gradient(to bottom,#0D1B2A,#1B263B);
+    color:#fff;
+  }
+  .glass-panel{
+    background:rgba(255,255,255,.1);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.15);
+  }
+  #particle-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:-1;
+  }
+  .hidden-section{display:none}
+  .active-section{display:block}
+  .edu-card img{
+    object-fit:cover;
+    width:100%;
+    height:140px;
+    border-radius:10px
+  }
+  .edu-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px
+  }
+  @media(min-width:768px){
+    .edu-grid{
+      grid-template-columns:repeat(3,1fr)
+    }
+  }
+  .modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:1000
+  }
+  .modal.open{display:flex}
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6)
+  }
+  .modal-content{
+    position:relative;
+    z-index:1;
+    width:92vw;
+    max-width:960px;
+    border-radius:16px;
+    overflow:hidden
+  }
+  .modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:rgba(255,255,255,.08);
+    padding:10px 14px
+  }
+  .modal-title{font-weight:800}
+  .modal-close{
+    background:transparent;
+    border:none;
+    color:#fff;
+    font-size:22px;
+    cursor:pointer
+  }
+  .modal-body{
+    background:rgba(255,255,255,.06)
+  }
+</style>
+<script>
+  // Corrected JS syntax for the config object
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          primary: "#4A90E2",
+          "background-dark": "#0D1B2A"
+        },
+        fontFamily: {
+          display: ["Space Grotesk"]
+        },
+        borderRadius: {
+          DEFAULT: "0.75rem",
+          lg: "1rem",
+          xl: "1.5rem",
+          full: "9999px"
+        }
+      }
+    }
+  };
+</script>
+</head>
+<body class="bg-background-dark font-display">
+<canvas id="particle-canvas"></canvas>
+
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+  <div class="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+    <div class="flex flex-col max-w-[1024px] flex-1">
+      <header class="flex items-center justify-between whitespace-nowrap px-6 py-4 rounded-xl glass-panel sticky top-5 z-10">
+        <div class="flex items-center gap-4 text-white">
+          <div class="size-6 text-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><path fill="currentColor" d="M24 .757 47.243 24 24 47.243.757 24 24 .757ZM21 35.757V12.243L9.243 24 21 35.757Z"/></svg>
+          </div>
+          <h2 class="text-white text-xl font-bold tracking-[-0.015em]">MAMMOCARE</h2>
+        </div>
+        <nav class="hidden md:flex flex-1 justify-end gap-8" aria-label="Main">
+          <button data-route="home" class="text-white text-sm font-medium hover:text-primary">Home</button>
+          <button data-route="education" class="text-white text-sm font-medium hover:text-primary">Education</button>
+          <button data-route="contact" class="text-white text-sm font-medium hover:text-primary">Contact</button>
+          <button data-route="about" class="text-white text-sm font-medium hover:text-primary">About</button>
+          <button id="loginBtn" class="flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold"><span class="truncate">Login/Sign Up</span></button>
+        </nav>
+        <div class="md:hidden"><button id="mobileMenuBtn" class="text-white"><span class="material-symbols-outlined">menu</span></button></div>
+      </header>
+
+      <div id="mobileMenu" class="glass-panel rounded-xl mt-3 p-4 md:hidden hidden">
+        <div class="grid gap-2">
+          <button data-route="home" class="text-white text-sm text-left">Home</button>
+          <button data-route="education" class="text-white text-sm text-left">Education</button>
+          <button data-route="contact" class="text-white text-sm text-left">Contact</button>
+          <button data-route="about" class="text-white text-sm text-left">About</button>
+          <button id="loginBtnMobile" class="mt-2 flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Login/Sign Up</button>
+        </div>
+      </div>
+
+      <main class="flex-1 mt-6">
+        <section id="home" class="active-section">
+          <div class="glass-panel rounded-xl">
+            <div class="@container p-4">
+              <div class="flex min-h-[480px] flex-col gap-6 @[480px]:gap-8 items-center justify-center p-4 text-center">
+                <div class="flex flex-col gap-2">
+                  <h1 class="text-white text-4xl font-black tracking-[-0.033em] @[480px]:text-6xl">Early Detection. Guided by AI.</h1>
+                  <h2 class="text-gray-300 text-base @[480px]:text-lg max-w-2xl mx-auto">Upload a mammogram to see AI‑assisted findings with confidence scores. Not for primary diagnosis.</h2>
+                </div>
+                <div class="flex-wrap gap-4 flex justify-center items-center">
+                  <button id="goDetect" class="flex min-w-[84px] items-center justify-center rounded-lg h-12 px-6 @[480px]:h-14 @[480px]:px-8 bg-primary text-white text-base font-bold"><span class="truncate">Upload Mammogram</span></button>
+                  <button data-route="education" class="text-white text-base font-medium underline underline-offset-4 hover:text-primary">Learn About Screening</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-12">
+            <h2 class="text-white text-3xl font-bold text-center px-4 pb-3">Simple Steps to Clarity</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
+              <div class="flex flex-1 gap-4 rounded-xl glass-panel p-6 flex-col text-center items-center">
+                <div class="text-primary bg-primary/20 rounded-full p-3"><span class="material-symbols-outlined text-4xl">cloud_upload</span></div>
+                <div class="flex flex-col gap-1"><h3 class="text-white text-xl font-bold">Upload Image</h3><p class="text-gray-300 text-sm">Securely upload your mammogram.</p></div>
+              </div>
+              <div class="flex flex-1 gap-4 rounded-xl glass-panel p-6 flex-col text-center items-center">
+                <div class="text-primary bg-primary/20 rounded-full p-3"><span class="material-symbols-outlined text-4xl">neurology</span></div>
+                <div class="flex flex-col gap-1"><h3 class="text-white text-xl font-bold">AI Analysis</h3><p class="text-gray-300 text-sm">Model highlights potential areas of interest.</p></div>
+              </div>
+              <div class="flex flex-1 gap-4 rounded-xl glass-panel p-6 flex-col text-center items-center">
+                <div class="text-primary bg-primary/20 rounded-full p-3"><span class="material-symbols-outlined text-4xl">clinical_notes</span></div>
+                <div class="flex flex-col gap-1"><h3 class="text-white text-xl font-bold">Consult & Learn</h3><p class="text-gray-300 text-sm">Review results and book a doctor.</p></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="education" class="hidden-section">
+          <div class="glass-panel rounded-xl p-6">
+            <h2 class="text-white text-2xl font-bold">Education</h2>
+            <p class="text-gray-300 mt-2">Plain‑English guides with visuals for common detection classes.</p>
+
+            <div class="edu-grid mt-4">
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://prod-images-static.radiopaedia.org/images/2126965/c7f2a4b3b997474881ac6f4b4e646a_big_gallery.jpg" alt="Calcifications example"/>
+                <div class="mt-3"><div class="text-primary font-bold">CALC</div><div class="text-white font-bold">Calcifications</div>
+                  <div class="text-gray-300 text-sm">Tiny calcium spots. Many benign; some patterns need follow‑up.</div>
+                  <div class="mt-2 flex gap-3">
+                    <a class="text-primary underline text-sm" href="https://radiologyassistant.nl/breast/calcifications/differential-of-breast-calcifications" target="_blank" rel="noopener">Learn more</a>
+<button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="https://www.youtube.com/watch?v=vS7NuH3SjhA">Watch clip</button>
+
+                  </div>
+                </div>
+              </article>
+
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://prod-images-static.radiopaedia.org/images/14440325/83811ab12a7f2c4b856ce229ab6c6a_big_gallery.jpg" alt="Architectural distortion example"/>
+                <div class="mt-3"><div class="text-primary font-bold">ARCH</div><div class="text-white font-bold">Architectural distortion</div>
+                  <div class="text-gray-300 text-sm">Normal tissue looks pulled/distorted; needs review.</div>
+                  <div class="mt-2 flex gap-3">
+                    <a class="text-primary underline text-sm" href="https://www.uclahealth.org/departments/radiology/education/breast-imaging-teaching-resources/birads/architectural-distortion" target="_blank" rel="noopener">Learn more</a>
+<button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="https://www.youtube.com/watch?v=E5PyxHmzw44">Watch clip</button>
+
+                  </div>
+                </div>
+              </article>
+
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://prod-images-static.radiopaedia.org/images/55608457/15759789a8dd9284dcbf7f90cffc6cd1f450bd68f40daa60d426ffabd7f6deff_big_gallery.jpeg" alt="Asymmetry example"/>
+                <div class="mt-3"><div class="text-primary font-bold">ASYM</div><div class="text-white font-bold">Asymmetry</div>
+                  <div class="text-gray-300 text-sm">One area looks denser/different than the matching area.</div>
+                  <div class="mt-2 flex gap-3">
+                    <a class="text-primary underline text-sm" href="https://www.uclahealth.org/departments/radiology/education/breast-imaging-teaching-resources/birads/breast-asymmetry" target="_blank" rel="noopener">Learn more</a>
+<button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="https://www.youtube.com/watch?v=rETWs8WSjRc">Watch clip</button>
+                  </div>
+                </div>
+              </article>
+
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://images.pexels.com/photos/7089023/pexels-photo-7089023.jpeg?auto=compress&cs=tinysrgb&w=640" alt="Circumscribed mass example"/>
+                <div class="mt-3"><div class="text-primary font-bold">CIRC</div><div class="text-white font-bold">Circumscribed mass</div>
+                  <div class="text-gray-300 text-sm">Well‑defined mass; often benign, context matters.</div>
+                  <div class="mt-2 flex gap-3">
+  <a class="text-primary underline text-sm" href="https://radiologyassistant.nl/breast/bi-rads/bi-rads-for-mammography-and-ultrasound-2013" target="_blank" rel="noopener">Learn more</a>
+  <button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="/videos/finding-basics.mp4">Watch clip</button>
+</div>
+
+                </div>
+              </article>
+
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://prod-images-static.radiopaedia.org/images/14440325/83811ab12a7f2c4b856ce229ab6c6a_big_gallery.jpg" alt="Spiculated mass example"/>
+                <div class="mt-3"><div class="text-primary font-bold">SPIC</div><div class="text-white font-bold">Spiculated mass</div>
+                  <div class="text-gray-300 text-sm">Radiating lines from a mass; often suspicious.</div>
+                 <div class="mt-2 flex gap-3">
+  <a class="text-primary underline text-sm" href="https://radiopaedia.org/cases/spiculated-breast-cancer" target="_blank" rel="noopener">Learn more</a>
+  <button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="/videos/finding-basics.mp4">Watch clip</button>
+</div>
+
+
+                </div>
+              </article>
+
+              <article class="glass-panel rounded-xl p-4 edu-card">
+                <img src="https://images.pexels.com/photos/7089023/pexels-photo-7089023.jpeg?auto=compress&cs=tinysrgb&w=640" alt="Misc mass example"/>
+                <div class="mt-3"><div class="text-primary font-bold">MISC</div><div class="text-white font-bold">Misc / ill‑defined mass</div>
+                  <div class="text-gray-300 text-sm">Unclear borders; review with other features.</div>
+                  <div class="mt-2 flex gap-3">
+  <a class="text-primary underline text-sm" href="https://radiologyassistant.nl/breast/bi-rads/bi-rads-for-mammography-and-ultrasound-2013" target="_blank" rel="noopener">Learn more</a>
+  <button class="text-white/90 bg-white/10 hover:bg-white/20 rounded-md px-2 py-1 text-sm" data-video="/videos/finding-basics.mp4">Watch clip</button>
+</div>
+
+
+                </div>
+              </article>
+            </div>
+
+            <div class="mt-4 text-white/70 text-sm">Note: “NORM” means no abnormal findings detected by the model.</div>
+          </div>
+        </section>
+
+            <section id="contact" class="hidden-section">
+              <div class="glass-panel rounded-xl p-6">
+                <h2 class="text-white text-2xl font-bold">Contact</h2>
+                <p class="text-gray-300 mt-2">Reach out for support and credits.</p>
+                <div class="mt-4 grid md:grid-cols-2 gap-4">
+                  <div class="glass-panel rounded-xl p-4">
+                    <div class="text-white font-bold">Support</div>
+                    <div class="text-gray-300 text-sm">Email: support@mammo.care</div>
+                  </div>
+                  <div class="glass-panel rounded-xl p-4">
+                    <div class="text-white font-bold">Credits</div>
+                    <div class="text-gray-300 text-sm">Built for educational and screening support purposes.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="about" class="hidden-section">
+              <div class="glass-panel rounded-xl p-6">
+                <h2 class="text-white text-2xl font-bold">About</h2>
+                <p class="text-gray-300 mt-2">Privacy‑first, patient‑controlled sharing. Admin cannot view private medical records.</p>
+                <ul class="text-gray-300 mt-4 list-disc pl-5 space-y-1">
+                  <li>Guest uploads are not saved.</li>
+                  <li>Patients choose to save/share/delete reports.</li>
+                  <li>Doctors see shared reports only.</li>
+                  <li>Admin approves doctors and edits awareness content.</li>
+                </ul>
+              </div>
+            </section>
+
+            <section id="detect" class="hidden-section">
+              <div class="glass-panel rounded-xl p-6">
+                <h2 class="text-white text-2xl font-bold">Upload & Detect</h2>
+                <p class="text-gray-300">Preview only (not saved). Patient login will enable saving.</p>
+                <div class="mt-4">
+                  <input id="fileInput" type="file" accept="image/*"
+                         class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white hover:file:bg-primary/80" />
+                  <canvas id="canvas" class="mt-4 w-full max-h-[60vh] rounded-xl bg-black/30"></canvas>
+                  <div id="log" class="mt-2 text-white/80">Status: Waiting for upload…</div>
+                  <div class="mt-4 flex gap-3">
+                    <button id="runBtn" class="rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Run Detection</button>
+                    <button id="clearBtn" class="rounded-lg h-10 px-4 bg-white/10 text-white text-sm font-bold">Clear</button>
+                    <button id="downloadBtn" class="rounded-lg h-10 px-4 bg-white/10 text-white text-sm font-bold">Download Annotated</button>
+                  </div>
+                  <div class="mt-4 grid md:grid-cols-3 gap-4">
+                    <div class="glass-panel rounded-xl p-4 text-center">
+                      <div class="text-primary font-bold">Findings</div>
+                      <div id="sumCount" class="text-white text-xl font-extrabold">0</div>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 text-center">
+                      <div class="text-primary font-bold">Top class</div>
+                      <div id="sumTop" class="text-white text-xl font-extrabold">—</div>
+                    </div>
+                    <div class="glass-panel rounded-xl p-4 text-center">
+                      <div class="text-primary font-bold">Max confidence</div>
+                      <div id="sumConf" class="text-white text-xl font-extrabold">0%</div>
+                    </div>
+                  </div>
+                  <div id="classExplain" class="glass-panel rounded-xl p-4 mt-4 text-white">No findings. When NORM appears, it means normal.</div>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <footer class="flex flex-col gap-6 px-5 py-10 text-center @container mt-12 border-t border-white/10">
+            <div class="flex flex-wrap items-center justify-center gap-6 @[480px]:gap-12">
+              <a href="#" class="text-gray-400 text-base hover:text-white">Privacy Policy</a>
+              <a href="#" class="text-gray-400 text-base hover:text-white">Terms of Service</a>
+              <a href="#" class="text-gray-400 text-base hover:text-white">HIPAA Compliance</a>
+            </div>
+            <p class="text-gray-500 text-sm">© 2025 MAMMOCARE. Educational and screening support.</p>
+          </footer>
+        </div>
+      </div>
+    </div>
+
+    <script>
+  const canvasBg = document.getElementById('particle-canvas');
+  const ctx = canvasBg.getContext('2d');
+  function sizeCanvas(){ canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; }
+  sizeCanvas();
+  let particles = []; const particleCount = 50;
+  class Particle {
+    constructor(){ this.x=Math.random()*canvasBg.width; this.y=Math.random()*canvasBg.height; this.size=Math.random()*2+1; this.speedX=Math.random()*0.5-0.25; this.speedY=Math.random()*0.5-0.25; this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')'; }
+    update(){ if(this.x>canvasBg.width||this.x<0) this.speedX*=-1; if(this.y>canvasBg.height||this.y<0) this.speedY*=-1; this.x+=this.speedX; this.y+=this.speedY; }
+    draw(){ ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+  }
+  function init(){ particles=[]; for(let i=0;i<particleCount;i++){ particles.push(new Particle()); } }
+  function connect(){ let o=1; for(let a=0;a<particles.length;a++){ for(let b=a;b<particles.length;b++){ const dx=particles[a].x-particles[b].x; const dy=particles[a].y-particles[b].y; const d=Math.sqrt(dx*dx+dy*dy); if(d<120){ o=1-d/120; ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(particles[a].x,particles[a].y); ctx.lineTo(particles[b].x,particles[b].y); ctx.stroke(); } } } }
+  function animate(){ ctx.clearRect(0,0,canvasBg.width,canvasBg.height); for(const p of particles){ p.update(); p.draw(); } connect(); requestAnimationFrame(animate); }
+  window.addEventListener('resize', ()=>{ sizeCanvas(); init(); });
+  init(); animate();
+</script>
+
+<script>
+  // Routing
+  const routes = ['home','education','contact','about','detect'];
+  function show(route){
+    routes.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.toggle('active-section', id===route);
+      el.classList.toggle('hidden-section', id!==route);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-route]').forEach(btn=>{
+    btn.addEventListener('click', ()=> show(btn.getAttribute('data-route')));
+  });
+  const goDetectBtn = document.getElementById('goDetect');
+  if (goDetectBtn) goDetectBtn.addEventListener('click', ()=> show('detect'));
+
+  // Mobile menu toggle
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (mobileBtn && mobileMenu) mobileBtn.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
+
+    // --- NEW: Link Login/Sign Up buttons to the login page ---
+const loginButtons = [
+  document.getElementById('loginBtn'),
+  document.getElementById('loginBtnMobile')
+];
+
+loginButtons.forEach(btn => {
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); // Good practice
+      window.location.href = 'login.html'; // Redirect to our new page
+    });
+  }
+});
+// --- End of new code ---
+ (function(){
+    // Build modal HTML
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-backdrop"></div>
+      <div class="modal-content glass-panel">
+        <div class="modal-header">
+          <div class="modal-title">Education Video</div>
+          <button class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="position:relative;padding-top:56.25%; background-color: #000;">
+            <video id="eduVideo"
+              style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"
+              controls autoplay playsinline muted>
+              <source id="eduSource" src="" type="video/mp4">
+              Your browser does not support HTML5 video.
+            </video>
+            <iframe id="eduYoutube"
+              style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              allowfullscreen>
+            </iframe>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    // Player wiring
+    const video = document.getElementById('eduVideo');
+    const source = document.getElementById('eduSource');
+    const youtubeFrame = document.getElementById('eduYoutube'); // Get the new iframe
+    const closeBtn = modal.querySelector('.modal-close');
+    const backdrop = modal.querySelector('.modal-backdrop');
+
+    // Helper to get YouTube ID from various URL formats
+    function getYouTubeID(url){
+      try {
+        const u = new URL(url);
+        if (u.hostname === 'youtu.be') {
+          return u.pathname.slice(1);
+        }
+        if (u.hostname.includes('youtube.com')) {
+          return u.searchParams.get('v');
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    function openVideo(url){
+      const ytID = getYouTubeID(url);
+
+      if (ytID) {
+        // It's a YouTube video
+        const embedUrl = `https://www.youtube.com/embed/${ytID}?autoplay=1&mute=1&playsinline=1`;
+        youtubeFrame.src = embedUrl;
+        youtubeFrame.style.display = 'block'; // Show iframe
+        video.style.display = 'none';      // Hide video player
+        modal.classList.add('open');
+      } else if (url.startsWith('/') || url.endsWith('.mp4')) {
+        // It's a local video
+        source.src = url;
+        video.load();
+        video.play().catch(()=>{});
+        video.style.display = 'block';      // Show video player
+        youtubeFrame.style.display = 'none'; // Hide iframe
+        modal.classList.add('open');
+      } else {
+        // Fallback for other links
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    }
+
+    function closeVideo(){
+      modal.classList.remove('open');
+      // Stop local video
+      video.pause();
+      source.src = '';
+      video.style.display = 'none';
+      // Stop YouTube video (by clearing src)
+      youtubeFrame.src = '';
+      youtubeFrame.style.display = 'none';
+    }
+
+    closeBtn?.addEventListener('click', closeVideo);
+    backdrop?.addEventListener('click', closeVideo);
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeVideo(); });
+
+    // Watch clip buttons
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-video]');
+      if (!btn) return;
+      const url = btn.getAttribute('data-video') || '';
+      if (!url) return;
+      openVideo(url);
+    });
+  })();
+
+
+  // Detect page logic
+  const API_URL = 'http://localhost:8000/predict';
+  const fileInput = document.getElementById('fileInput');
+  const canvas = document.getElementById('canvas');
+  const log = document.getElementById('log');
+  const runBtn = document.getElementById('runBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const downloadBtn = document.getElementById('downloadBtn'); // Re-declared
+  const sumCount = document.getElementById('sumCount');
+  const sumTop = document.getElementById('sumTop');
+  const sumConf = document.getElementById('sumConf');
+  const classExplainEl = document.getElementById('classExplain');
+
+  const CLASS_INFO = {
+    CALC: "Calcification — small calcium deposits; benign or sometimes associated with disease.",
+    CIRC: "Well‑defined/circumscribed masses — often benign but may need review.",
+    SPIC: "Spiculated masses — suspicious and need careful evaluation.",
+    MISC: "Other, ill‑defined masses — unclear borders; review needed.",
+    ARCH: "Architectural distortion — tissue pattern pulled/distorted.",
+    ASYM: "Asymmetry — one area looks denser/different.",
+    NORM: "Normal — no abnormal findings detected by the model."
+  };
+
+  let imageFile = null;
+  let imgObj = null;
+
+  function summarize(preds){
+    sumCount.textContent = String(preds.length);
+    if (!preds.length){
+      sumTop.textContent = "—";
+      sumConf.textContent = "0%";
+      classExplainEl.textContent = "No findings. When NORM appears, it means normal.";
+      return;
+    }
+    let maxP = preds[0];
+    for (const p of preds){ if ((p.confidence||0) > (maxP.confidence||0)) maxP = p; }
+    const topClass = (maxP.class || "unknown");
+    sumTop.textContent = topClass;
+    sumConf.textContent = (((maxP.confidence || 0) * 100).toFixed(1)) + "%";
+    classExplainEl.textContent = CLASS_INFO[topClass?.toUpperCase()] || "Explanation not available for this class.";
+  }
+
+  function renderDetections(preds){
+    if (!imgObj || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+    const scaleX = canvas.width / (imgObj.naturalWidth || canvas.width);
+    const scaleY = canvas.height / (imgObj.naturalHeight || canvas.height);
+    ctx.strokeStyle = '#e11d48';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#e11d48';
+    ctx.font = '14px Space Grotesk';
+    preds.forEach(p=>{
+      const bb = p.bbox || p.box || [];
+      const x1 = (bb[0]||0)*scaleX, y1 = (bb[1]||0)*scaleY, x2 = (bb[2]||0)*scaleX, y2=(bb[3]||0)*scaleY;
+      ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+      ctx.fillText((p.class||'unknown') + ' (' + (((p.confidence||0)*100).toFixed(1)) + '%)', x1+6, y1+18);
+    });
+  }
+
+  function loadImageFile(f){
+    if (!f || !f.type || !f.type.startsWith('image/')){ if (log) log.textContent='Error: Please select a JPG/PNG image.'; return; }
+    imageFile = f;
+    imgObj = new Image();
+    imgObj.onload = ()=>{
+      const nw = imgObj.naturalWidth||imgObj.width||0;
+      const nh = imgObj.naturalHeight||imgObj.height||0;
+      const maxW = 1400, ratio = Math.min(1, maxW / (nw||maxW));
+      canvas.width = Math.round((nw||maxW)*ratio);
+      canvas.height = Math.round((nh||maxW)*ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+      if (log) log.textContent = 'Status: Image loaded. Ready to detect.';
+      summarize([]);
+    };
+    imgObj.onerror = ()=>{ if (log) log.textContent = 'Error: Could not load this image.'; };
+    imgObj.src = URL.createObjectURL(f);
+  }
+
+  async function callBackend(file, conf){
+    const formData = new FormData(); formData.append('file', file);
+    const url = API_URL + '?conf=' + encodeURIComponent(conf);
+    const res = await fetch(url, { method:'POST', body:formData });
+    if(!res.ok){ const text = await res.text(); throw new Error('HTTP ' + res.status + ' ' + res.statusText + ': ' + text); }
+    return res.json();
+  }
+
+  // Bind events
+  if (fileInput) {
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if (f) loadImageFile(f);
+    });
+  }
+  if (runBtn) {
+    runBtn.addEventListener('click', async ()=>{
+      if (!imageFile){ if (log) log.textContent='Please select an image first.'; return; }
+      if (log) log.textContent='Detecting…';
+      try{
+        const data = await callBackend(imageFile, 0.15);
+        const preds = data.predictions || [];
+        summarize(preds);
+        renderDetections(preds);
+        if (log) log.textContent='Done.';
+      }catch(err){
+        if (log) log.textContent='Error: ' + err.message;
+      }
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', ()=>{
+      if (!imgObj || !canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+      summarize([]);
+      if (log) log.textContent='Status: Cleared annotations.';
+    });
+  }
+  
+  // --- NEW: Download Annotated button now redirects to login ---
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', (e) => {
+      e.preventDefault(); // Stop default action
+      // Redirect to the login page
+      window.location.href = 'login.html'; 
+    });
+  }
+</script>
+</body>
+</html>
