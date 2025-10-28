@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+.bg-gradient { background: radial-gradient(1200px circle at 20% 10%, #130f2a 0%, #0b1020 55%, #060913 100%); }
+.headline-glow { text-shadow: 0 0 14px rgba(107, 33, 168, 0.35); }
+.btn-press { transform: translateY(0); transition: transform 120ms ease, box-shadow 200ms ease; }
+.btn-press:active { transform: translateY(1px); }
