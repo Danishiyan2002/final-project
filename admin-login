@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Portal - MAMMOCARE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+  /* --- Base styles from your website --- */
+  body {
+    font-family: "Space Grotesk", sans-serif;
+    background: linear-gradient(to bottom, #0D1B2A, #1B263B);
+    color: #fff;
+    overflow-x: hidden;
+  }
+  .glass-panel {
+    background: rgba(255, 255, 255, .1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, .15);
+  }
+  #particle-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+  .auth-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  .auth-form {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255, 255, 255, .08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+  }
+  .form-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2rem;
+  }
+  .form-title .icon {
+    color: #4A90E2;
+    font-size: 2.25rem;
+  }
+  .input-group {
+    margin-bottom: 1.25rem;
+  }
+  .input-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+  }
+  .input-field {
+    width: 100%;
+    height: 3rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    color: #111;
+    font-size: 1rem;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #4A90E2;
+  }
+  .btn-primary {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    height: 3rem;
+    background-color: #4A90E2;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-primary:disabled {
+    background-color: #357ABD;
+    opacity: 0.7;
+  }
+  .auth-message {
+    text-align: center;
+    font-weight: 500;
+    margin-top: 1rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    color: #ef4444; /* Red */
+  }
+  .auth-message.show {
+    opacity: 1;
+  }
+</style>
+</head>
+<body class="bg-background-dark font-display">
+<canvas id="particle-canvas"></canvas>
+
+<div class="auth-wrapper">
+  <div class="auth-form">
+    <form id="loginForm">
+      <div class="form-title">
+        <span class="material-symbols-outlined icon">admin_panel_settings</span>
+        <span>Admin Portal</span>
+      </div>
+      <div class="input-group"> 
+        <label for="login-email" class="input-label">Admin Email</label>
+        <input type="email" id="login-email" class="input-field" required>
+      </div>
+      <div class="input-group">
+        <label for="login-password" class="input-label">Password</label>
+        <input type="password" id="login-password" class="input-field" required>
+      </div>
+      <button type="submit" id="loginSubmitBtn" class="btn-primary" style="margin-top: 2rem;">
+        Login
+      </button>
+      
+      <div id="loginMessage" class="auth-message"></div>
+      
+    </form>
+  </div>
+</div>
+
+<script>
+  const canvasBg = document.getElementById('particle-canvas');
+  const ctx = canvasBg.getContext('2d');
+  function sizeCanvas(){ canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; }
+  sizeCanvas();
+  let particles = []; const particleCount = 50;
+  class Particle {
+    constructor(){ this.x=Math.random()*canvasBg.width; this.y=Math.random()*canvasBg.height; this.size=Math.random()*2+1; this.speedX=Math.random()*0.5-0.25; this.speedY=Math.random()*0.5-0.25; this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')'; }
+    update(){ if(this.x>canvasBg.width||this.x<0) this.speedX*=-1; if(this.y>canvasBg.height||this.y<0) this.speedY*=-1; this.x+=this.speedX; this.y+=this.speedY; }
+    draw(){ ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+  }
+  function init(){ particles=[]; for(let i=0;i<particleCount;i++){ particles.push(new Particle()); } }
+  function connect(){ let o=1; for(let a=0;a<particles.length;a++){ for(let b=a;b<particles.length;b++){ const dx=particles[a].x-particles[b].x; const dy=particles[a].y-particles[b].y; const d=Math.sqrt(dx*dx+dy*dy); if(d<120){ o=1-d/120; ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(particles[a].x,particles[a].y); ctx.lineTo(particles[b].x,particles[b].y); ctx.stroke(); } } } }
+  function animate(){ ctx.clearRect(0,0,canvasBg.width,canvasBg.height); for(const p of particles){ p.update(); p.draw(); } connect(); requestAnimationFrame(animate); }
+  window.addEventListener('resize', ()=>{ sizeCanvas(); init(); });
+  init(); animate();
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // --- YOUR REAL FIREBASE KEYS ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPJIH_83r_6ImQ_Oa8JU3OVvMkw3I5Mmw",
+    authDomain: "mammocare-backend.firebaseapp.com",
+    projectId: "mammocare-backend",
+    storageBucket: "mammocare-backend.firebasestorage.app",
+    messagingSenderId: "187598388703",
+    appId: "1:187598388703:web:f6e442aa544953917e586a",
+    measurementId: "G-WRK53QYD0H"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  
+  const loginForm = document.getElementById('loginForm');
+  const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+  const loginMessage = document.getElementById('loginMessage');
+  
+  // --- *** MODIFIED Logic for ADMIN LOGIN *** ---
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = 'Logging In...';
+    loginMessage.classList.remove('show');
+
+    try {
+      // 1. Sign in with Auth
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      
+      // 2. Check their role in Firestore
+      const userDocRef = db.collection('users').doc(user.uid);
+      const userDoc = await userDocRef.get();
+      
+      // *** THIS IS THE ONLY CHANGE ***
+      // Check for 'admin' role
+      if (userDoc.exists && userDoc.data().role === 'admin') {
+        // 3. SUCCESS! They are an admin.
+        // Redirect to 'admin.html'
+        window.location.href = 'admin.html'; 
+      } else {
+        // 4. Not an admin
+        await auth.signOut();
+        loginMessage.textContent = 'Access Denied. This portal is for administrators only.';
+        loginMessage.classList.add('show');
+        loginSubmitBtn.disabled = false;
+        loginSubmitBtn.textContent = 'Login';
+      }
+      
+    } catch (error) {
+      // Handle wrong password, user not found, etc.
+      loginMessage.textContent = 'Invalid email or password.';
+      loginMessage.classList.add('show');
+      loginSubmitBtn.disabled = false;
+      loginSubmitBtn.textContent = 'Login';
+    }
+  });
+</script>
+</body>
+</html>

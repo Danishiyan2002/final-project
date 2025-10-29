@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Dashboard - MAMMOCARE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+<style>
+  /* --- Base Styles --- */
+  body{
+    font-family:"Space Grotesk",sans-serif;
+    background:linear-gradient(to bottom,#0D1B2A,#1B263B);
+    color:#fff;
+    min-height: 100vh;
+  }
+  .glass-panel{
+    background:rgba(255,255,255,.1);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius: 0.75rem;
+  }
+  #particle-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:-1;
+  }
+  .hidden-section{display:none}
+  .active-section{display:block}
+  .hidden { display: none; }
+
+  /* --- Loading Overlay --- */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(to bottom, #0D1B2A, #1B263B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #4A90E2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dashboard-content { display: none; }
+
+  /* --- Header & Navigation --- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+    nav {
+        display: flex; /* Always flex for desktop */
+        flex-grow: 1;
+        justify-content: center; /* Center nav items on larger screens */
+        flex-wrap: wrap; /* Allow wrapping */
+        gap: 0.5rem 1rem; /* Spacing between buttons (vertical horizontal) */
+        padding: 0 0.5rem; /* Reduced padding */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Hide scrollbar Firefox */
+        -ms-overflow-style: none;  /* Hide scrollbar IE/Edge */
+    }
+    nav::-webkit-scrollbar { display: none; } /* Hide scrollbar Chrome/Safari */
+
+    .header-nav-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      position: relative;
+      padding: 0.5rem 0.5rem; /* More padding */
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .header-nav-btn:hover { color: #4A90E2; }
+    .header-nav-btn.active { color: #4A90E2; font-weight: 700; }
+    #signOutBtn { flex-shrink: 0; margin-left: 1rem; /* Spacing */ }
+
+    @media (max-width: 1023px) { /* Use lg breakpoint */
+        nav { display: none; }
+    }
+    .mobile-menu-btn-container { display: none; margin-left: auto; }
+    @media (max-width: 1023px) { /* Use lg breakpoint */
+        .mobile-menu-btn-container { display: block; }
+        #signOutBtn { display: none; }
+    }
+
+
+  /* --- Content Sections --- */
+  .content-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1rem;
+  }
+  .content-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .content-section p {
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+  }
+
+  /* --- Forms --- */
+  .form-group { margin-bottom: 1rem; }
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    color: #111;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.3);
+  }
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+    }
+    .form-select option { background: #fff; color: #111; }
+
+  .btn-primary, .btn-secondary { /* Added btn-secondary */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    height: 3rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .btn-primary {
+    background-color: #4A90E2;
+    color: #fff;
+  }
+  .btn-secondary { /* Added styles for secondary */
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-primary:hover:not(:disabled) { background-color: #357ABD; }
+  .btn-secondary:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.25); } /* Added hover for secondary */
+  .btn-primary:disabled, .btn-secondary:disabled {
+    background-color: #357ABD;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .btn-secondary:disabled { /* Different disabled style for secondary */
+     background-color: rgba(255, 255, 255, 0.1);
+     opacity: 0.5;
+     cursor: not-allowed; /* Make sure cursor is not-allowed */
+  }
+
+
+  /* --- List Items (Users) --- */
+  .list-item {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    margin-top: 0.75rem;
+  }
+    .list-item-info {
+      flex-grow: 1;
+      min-width: 200px;
+      padding-right: 1rem;
+    }
+  .list-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    flex-shrink: 0;
+  }
+  .list-item-actions .btn-sm {
+    background: rgba(255,255,255,.1);
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .list-item-actions .btn-sm:hover:not(:disabled) { background: rgba(255,255,255,.2); }
+  .list-item-actions .btn-sm:disabled { opacity: 0.5; cursor: not-allowed;}
+  .list-item-actions .btn-sm.btn-terminate,
+  .list-item-actions .btn-sm.btn-delete { background: #ef4444; }
+
+    .list-item .user-role {
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .list-item .reports-saved {
+      color: #9ca3af;
+      margin-left: 0.5rem;
+    }
+    @media (max-width: 768px) {
+      .list-item { flex-direction: column; align-items: flex-start; }
+      .list-item-actions { margin-left: 0; width: 100%; justify-content: flex-start; margin-top: 0.75rem;}
+      .list-item .reports-saved { margin-left: 0; display: block; margin-top: 0.25rem;}
+    }
+
+  /* --- Stat Cards --- */
+  .stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+  }
+  .stat-card-title {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .stat-card-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+  }
+
+  /* --- Warning Box --- */
+  .warning-box {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    color: #f87171;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  .warning-box strong { color: #ef4444; }
+
+  /* --- Report Generation --- */
+  #report-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-end; /* Align items to bottom for button */
+  }
+  .report-user-filter-group {
+    flex: 1 1 200px; /* Allow shrinking but base width 200px */
+    min-width: 150px; /* Ensure minimum width */
+  }
+  #report-results-table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+  }
+  #report-results-table th,
+  #report-results-table td {
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.75rem;
+    text-align: left;
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+    #report-results-table th {
+      background-color: rgba(255,255,255,0.1);
+      font-weight: 600;
+    }
+    #report-results-table td { color: #cbd5e1; }
+    #report-results-container {
+      min-height: 100px;
+      position: relative; /* Needed for loading overlay positioning */
+    }
+    #report-loading { /* Make loading overlay cover the table */
+        position: absolute;
+        inset: 0;
+        background-color: rgba(13, 27, 42, 0.8); /* Semi-transparent background */
+        display: flex; /* Use flex to center content */
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 0.75rem; /* Match panel rounding */
+        text-align: center; /* Center text */
+    }
+    #report-loading.hidden { /* Ensure hidden class works */
+        display: none;
+    }
+    .report-table-wrapper { /* Added wrapper for scrolling */
+      overflow-x: auto;
+      margin-top: 1rem; /* Space above table */
+    }
+
+
+    /* --- User Filter Buttons --- */
+    #user-filter-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .user-filter-btn {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .user-filter-btn:hover {
+      background: rgba(255,255,255,.2);
+    }
+    .user-filter-btn.active {
+      background: #4A90E2;
+      color: #fff;
+      font-weight: 700;
+    }
+
+</style>
+<script>
+  tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:"#4A90E2","background-dark":"#0D1B2A"},fontFamily:{display:["Space Grotesk"]},borderRadius:{DEFAULT:"0.75rem",lg:"1rem",xl:"1.5rem",full:"9999px"}}}};
+</script>
+</head>
+<body class="bg-background-dark font-display">
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div>Loading Admin Portal...</div>
+</div>
+
+<div id="dashboard-content" class="dashboard-content">
+  <canvas id="particle-canvas"></canvas>
+  <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+    <div class="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+      <div class="flex flex-col max-w-[1024px] flex-1">
+
+        <header class="glass-panel px-6 py-4 sticky top-5 z-10">
+            <div class="flex items-center justify-between">
+                <div class="logo-container">
+                    <div class="size-6 text-primary"> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><path fill="currentColor" d="M24 .757 47.243 24 24 47.243.757 24 24 .757ZM21 35.757V12.243L9.243 24 21 35.757Z"/></svg> </div>
+                    <h2 class="text-white text-xl font-bold tracking-[-0.015em] whitespace-nowrap">MAMMOCARE ADMIN</h2>
+                </div>
+
+                <nav aria-label="Main" class="hidden lg:flex">
+                    <button data-route="dashboard" class="header-nav-btn active">Dashboard</button>
+                    <button data-route="user-management" class="header-nav-btn">Users</button>
+                    <button data-route="create-user" class="header-nav-btn">Create Doctor</button>
+                    <button data-route="generate-reports" class="header-nav-btn">Reports</button>
+                    <button data-route="system-settings" class="header-nav-btn">Settings</button>
+                </nav>
+
+                <button id="signOutBtn" class="hidden lg:flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold"><span class="truncate">Sign Out</span></button>
+
+                <div class="mobile-menu-btn-container lg:hidden">
+                    <button id="mobileMenuBtn" class="text-white"><span class="material-symbols-outlined">menu</span></button>
+                </div>
+            </div>
+        </header>
+
+
+        <div id="mobileMenu" class="glass-panel rounded-xl mt-3 p-4 lg:hidden hidden">
+             <div class="grid gap-2">
+                <button data-route="dashboard" class="header-nav-btn text-left active">Dashboard</button>
+                <button data-route="user-management" class="header-nav-btn text-left">Users</button>
+                <button data-route="create-user" class="header-nav-btn text-left">Create Doctor</button>
+                <button data-route="generate-reports" class="header-nav-btn text-left">Reports</button>
+                <button data-route="system-settings" class="header-nav-btn text-left">Settings</button>
+                <button id="signOutBtnMobile" class="mt-2 flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Sign Out</button>
+            </div>
+        </div>
+
+        <main class="flex-1 mt-6">
+          <div class="glass-panel rounded-xl p-6 mb-6">
+            <h1 class="text-3xl font-bold">Welcome, <span id="admin-name">Admin</span>!</h1>
+            <p class="text-gray-300 mt-1">Manage users, reports, and settings.</p>
+          </div>
+
+          <section id="dashboard" class="active-section content-section">
+             <div class="glass-panel rounded-xl p-6">
+               <h2>Quick Stats</h2>
+               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+                 <div class="stat-card glass-panel"><p class="stat-card-title text-gray-300">Total Patients</p><p id="stats-patients" class="stat-card-value text-white">0</p></div>
+                 <div class="stat-card glass-panel"><p class="stat-card-title text-gray-300">Total Doctors</p><p id="stats-doctors" class="stat-card-value text-white">0</p></div>
+                 <div class="stat-card glass-panel"><p class="stat-card-title text-gray-300">Total Reports Saved</p><p id="stats-reports" class="stat-card-value text-white">0</p></div>
+                 <div class="stat-card glass-panel"><p class="stat-card-title text-gray-300">Total Chat Sessions</p><p id="stats-chats" class="stat-card-value text-white">0</p></div>
+               </div>
+             </div>
+          </section>
+
+          <section id="user-management" class="hidden-section content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>All Users</h2>
+              <p>View and delete user accounts. This action is permanent.</p>
+
+              <div id="user-filter-container" class="flex flex-wrap gap-2 my-4">
+                <button class="user-filter-btn active" data-filter="all">Show All</button>
+                <button class="user-filter-btn" data-filter="patient">Patients</button>
+                <button class="user-filter-btn" data-filter="doctor">Doctors</button>
+                <button class="user-filter-btn" data-filter="admin">Admins</button>
+              </div>
+
+              <div id="all-users-list" class="mt-4">
+                <div class="text-center p-4">Loading all users...</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="create-user" class="hidden-section content-section">
+             <div class="glass-panel rounded-xl p-6">
+               <h2>Create New Doctor</h2>
+               <p>Create a new Doctor account.</p>
+               <form id="create-user-form" class="mt-6 max-w-lg">
+                 <div class="form-group"> <label for="user-name" class="form-label">Full Name</label> <input type="text" id="user-name" class="form-input" required> </div>
+                 <div class="form-group"> <label for="user-email" class="form-label">Email</label> <input type="email" id="user-email" class="form-input" required> </div>
+                 <div class="form-group"> <label for="user-password" class="form-label">Password</label> <input type="password" id="user-password" class="form-input" required placeholder="Min. 6 characters"> </div>
+                 <button type="submit" id="create-user-btn" class="btn-primary">Create Doctor Account</button>
+               </form>
+               <div class="warning-box"> <strong>Important:</strong> Creating any user here might sign you out immediately. Log back in after. </div>
+             </div>
+          </section>
+
+          <section id="generate-reports" class="hidden-section content-section">
+             <div class="glass-panel rounded-xl p-6">
+               <h2>Generate Reports</h2>
+               <p>Select report type and filters to view activity logs. Reports generate automatically when filters change.</p>
+
+               {/* --- Filters --- */}
+               <div id="report-filters" class="mt-6">
+                   <div class="form-group flex-1 min-w-[200px]">
+                       <label for="report-type" class="form-label">Report Type</label>
+                       <select id="report-type" class="form-select">
+                           {/* Doctor Activity is the new default to ensure smoother initial load */}
+                           <option value="doctor-activity">Doctor Activity (Completed)</option>
+                           <option value="user-list">User List</option>
+                           <option value="patient-activity">Patient Activity (Reports)</option>
+                           <option value="admin-log">Admin Actions Log</option>
+                       </select>
+                   </div>
+                   <div class="form-group report-user-filter-group hidden">
+                       <label for="report-filter" class="form-label">Filter by User</label>
+                       <select id="report-filter" class="form-select" disabled>
+                           <option value="all">All Users</option>
+                       </select>
+                   </div>
+                   <div class="form-group flex-1 min-w-[150px]">
+                       <label for="report-date-range" class="form-label">Date Range</label>
+                       <select id="report-date-range" class="form-select">
+                           <option value="all-time">All Time</option>
+                           <option value="last-month">Last Month</option>
+                           <option value="last-30-days">Last 30 Days</option>
+                           <option value="last-7-days">Last 7 Days</option>
+                       </select>
+                   </div>
+               </div>
+
+               {/* --- Results --- */}
+               <div id="report-results-container" class="mt-4">
+                   <h3 id="report-title">Report Results</h3>
+                   {/* Improved Loading Overlay */}
+                   <div id="report-loading" class="hidden">
+                       <div class="spinner mx-auto mb-2"></div>
+                       <div>Generating Report...</div>
+                   </div>
+
+                   <div class="report-table-wrapper">
+                       <table id="report-results-table">
+                           <thead id="report-table-head"></thead>
+                           <tbody id="report-table-body">
+                               <tr><td colspan="4" class="text-center text-gray-400">Select filters to generate a report.</td></tr>
+                           </tbody>
+                       </table>
+                   </div>
+
+                   <div class="mt-6 text-center">
+                       <button id="download-pdf-btn" class="btn-secondary" disabled>Download as PDF</button>
+                   </div>
+               </div>
+             </div>
+          </section>
+
+          <section id="system-settings" class="hidden-section content-section">
+             <div class="glass-panel rounded-xl p-6">
+               <h2>System Settings</h2>
+               <p>Configure basic website settings.</p>
+               <form id="settings-form" class="mt-6 max-w-lg">
+                   <div class="form-group"> <label for="setting-backend-url" class="form-label">Detection Backend URL</label> <input type="url" id="setting-backend-url" class="form-input" placeholder="http://localhost:5000/api/detect"> </div> {/* ADDED */}
+                   <div class="form-group"> <label for="setting-contact-email" class="form-label">Public Contact Email</label> <input type="email" id="setting-contact-email" class="form-input" placeholder="support@mammocare.com"> </div>
+                   <div class="form-group"> <label for="setting-maintenance-message" class="form-label">Site Maintenance Message</label> <textarea id="setting-maintenance-message" class="form-textarea" rows="3" placeholder="Leave blank for normal operation..."></textarea> </div>
+                   <div class="form-group"> <label for="setting-default-spec" class="form-label">Default Doctor Specialization</label> <input type="text" id="setting-default-spec" class="form-input" placeholder="e.g., Oncologist"> </div>
+                   <button type="submit" id="save-settings-btn" class="btn-primary">Save Settings</button>
+               </form>
+             </div>
+          </section>
+
+        </main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Particle code --- (Unchanged)
+  const canvasBg = document.getElementById('particle-canvas'); if(canvasBg){const ctx=canvasBg.getContext('2d');function sizeCanvas(){canvasBg.width=window.innerWidth;canvasBg.height=window.innerHeight;} sizeCanvas();let particles=[];const particleCount=50;class Particle{constructor(){this.x=Math.random()*canvasBg.width;this.y=Math.random()*canvasBg.height;this.size=Math.random()*2+1;this.speedX=Math.random()*0.5-0.25;this.speedY=Math.random()*0.5-0.25;this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')';} update(){if(this.x>canvasBg.width||this.x<0)this.speedX*=-1;if(this.y>canvasBg.height||this.y<0)this.speedY*=-1;this.x+=this.speedX;this.y+=this.speedY;} draw(){ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill();}} function init(){particles=[];for(let i=0;i<particleCount;i++){particles.push(new Particle());}} function connect(){let o=1;for(let a=0;a<particles.length;a++){for(let b=a;b<particles.length;b++){const dx=particles[a].x-particles[b].x;const dy=particles[a].y-particles[b].y;const d=Math.sqrt(dx*dx+dy*dy);if(d<120){o=1-d/120;ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(particles[a].x,particles[a].y);ctx.lineTo(particles[b].x,particles[b].y);ctx.stroke();}}}} function animate(){ctx.clearRect(0,0,canvasBg.width,canvasBg.height);for(const p of particles){p.update();p.draw();} connect();requestAnimationFrame(animate);} window.addEventListener('resize',()=>{sizeCanvas();init();});init();animate();}
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+<script>
+  // --- Firebase Config ---
+  // !! PASTE YOUR *OWN* FIREBASE CONFIG HERE !!
+  // !! The keys below are just placeholders !!
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPJIH_83r_6ImQ_Oa8JU3OVvMkw3I5Mmw",
+    authDomain: "mammocare-backend.firebaseapp.com",
+    projectId: "mammocare-backend",
+    storageBucket: "mammocare-backend.firebasestorage.app",
+    messagingSenderId: "187598388703",
+    appId: "1:187598388703:web:f6e442aa544953917e586a",
+    measurementId: "G-WRK53QYD0H"
+  };
+
+  // --- Initialize Firebase ---
+  // This defines 'auth' and 'db' so your main script can use them
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+  let currentAdmin = null;
+  let currentAdminEmail = null;
+</script>
+<script>
+// ===================================================================
+// JAVASCRIPT - MAIN APPLICATION LOGIC
+// ===================================================================
+// This script block must come AFTER the Firebase init script
+//
+// --- 1. GATHER ALL PAGE ELEMENTS ---
+const loadingOverlay = document.getElementById('loading-overlay');
+const dashboardContent = document.getElementById('dashboard-content');
+const adminNameEl = document.getElementById('admin-name');
+const signOutBtn = document.getElementById('signOutBtn');
+const signOutBtnMobile = document.getElementById('signOutBtnMobile');
+const mobileBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+const routeButtons = document.querySelectorAll('[data-route]');
+const sections = [
+  'dashboard',
+  'user-management',
+  'create-user',
+  'generate-reports',
+  'system-settings'
+];
+const statsPatients = document.getElementById('stats-patients');
+const statsDoctors = document.getElementById('stats-doctors');
+const statsReports = document.getElementById('stats-reports');
+const statsChats = document.getElementById('stats-chats');
+const allUsersListEl = document.getElementById('all-users-list');
+const userFilterContainer = document.getElementById('user-filter-container');
+const createUserForm = document.getElementById('create-user-form');
+const createUserBtn = document.getElementById('create-user-btn');
+const reportTypeSelect = document.getElementById('report-type');
+const reportFilterSelect = document.getElementById('report-filter');
+const reportUserFilterGroup = document.querySelector('.report-user-filter-group');
+const reportDateRangeSelect = document.getElementById('report-date-range');
+const reportTitleEl = document.getElementById('report-title');
+const reportLoadingEl = document.getElementById('report-loading');
+const reportTableHead = document.getElementById('report-table-head');
+const reportTableBody = document.getElementById('report-table-body');
+const downloadPdfBtn = document.getElementById('download-pdf-btn');
+const settingsForm = document.getElementById('settings-form');
+const settingBackendUrl = document.getElementById('setting-backend-url');
+const settingContactEmail = document.getElementById('setting-contact-email');
+const settingMaintenanceMsg = document.getElementById('setting-maintenance-message');
+const settingDefaultSpec = document.getElementById('setting-default-spec');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+// --- 2. GLOBAL STATE VARIABLES ---
+let reportCounts = {};
+let allUsersData = [];
+let allDoctorsData = [];
+let allAdminsData = [];
+let currentUserFilter = 'all';
+let currentReportData = { headers: [], rows: [] };
+let isInitialDataLoaded = false;
+let detectionBackendUrl = '';
+
+// --- 3. HELPER FUNCTIONS ---
+async function logAdminAction(action, targetUserEmail = null) { if (!currentAdmin) return; try { await db.collection('admin_logs').add({ timestamp: firebase.firestore.FieldValue.serverTimestamp(), action: action, adminEmail: currentAdmin.email, targetUserEmail: targetUserEmail || null }); console.log("Admin Action Logged:", action, targetUserEmail); } catch (error) { console.error("Failed to log admin action:", error); } }
+
+// --- 4. CORE APPLICATION LOGIC ---
+
+// --- 4.1. AUTHENTICATION LISTENER ---
+// 'auth' and 'db' are now defined from the script block above
+auth.onAuthStateChanged(async (user) => {
+    console.log("Authentication state changed. User:", user ? user.uid : 'No User');
+    if (user) {
+        currentAdminEmail = user.email;
+        try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data().role === 'admin') {
+                currentAdmin = user;
+                adminNameEl.textContent = user.displayName || userDoc.data().name || 'Admin';
+                console.log("Admin confirmed.");
+
+                await loadReportCounts();
+                await loadUsersInternalOnly(); // Load users internally
+
+                // Load other data and initialize
+                await Promise.all([
+                    loadDashboardStats(),
+                    loadSettings()
+                ]);
+
+                console.log("All initial data loaded.");
+                isInitialDataLoaded = true;
+
+                updateUserListUI();
+                populateReportFilterOptions();
+                generateReport();
+
+                dashboardContent.style.display = 'block';
+                loadingOverlay.style.display = 'none';
+
+            } else {
+                // This is where you get kicked out if you aren't an admin
+                console.warn("User is not admin."); 
+                await auth.signOut(); 
+                alert('Access Denied. You are not an admin.'); 
+                window.location.href = 'admin-login.html'; 
+            }
+        } catch (error) {
+            // This is where you get kicked out if rules are wrong
+            console.error("Auth listener error:", error); 
+            alert('Error loading admin data. Check console (F12) for details.'); 
+            loadingOverlay.textContent = "Error loading."; 
+            isInitialDataLoaded = false;
+            await auth.signOut(); // Sign out to prevent loop
+            window.location.href = 'admin-login.html';
+        }
+    } else {
+        // This is the first check that fails if scripts are missing
+        console.log("No user logged in. Redirecting to login."); 
+        window.location.href = 'admin-login.html'; 
+        isInitialDataLoaded = false;
+    }
+});
+
+
+// --- 4.2. SIGN OUT & NAVIGATION ---
+function handleSignOut() { auth.signOut().then(()=>{ window.location.href='admin-login.html'; }); }
+signOutBtn.addEventListener('click',handleSignOut);
+signOutBtnMobile.addEventListener('click',handleSignOut);
+mobileBtn.addEventListener('click',()=>mobileMenu.classList.toggle('hidden'));
+function show(route){
+    sections.forEach(id=>{ const el=document.getElementById(id); if(!el)return; el.classList.toggle('active-section',id===route); el.classList.toggle('hidden-section',id!==route); });
+    routeButtons.forEach(btn=>{ btn.classList.toggle('active',btn.getAttribute('data-route')===route); });
+    if(route === 'generate-reports'){
+        populateReportFilterOptions();
+        if (isInitialDataLoaded) {
+             generateReport();
+        } else {
+             reportTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400">Waiting for initial data...</td></tr>`;
+             downloadPdfBtn.disabled = true;
+        }
+    } else if (route === 'user-management' && isInitialDataLoaded) {
+        updateUserListUI();
+    }
+    window.scrollTo({top:0,behavior:'smooth'}); mobileMenu.classList.add('hidden');
+}
+routeButtons.forEach(btn=>{ btn.addEventListener('click',()=>show(btn.getAttribute('data-route'))); });
+
+// --- 4.3. LOAD DASHBOARD STATS ---
+async function loadDashboardStats(){ 
+    console.log("Loading stats..."); 
+    try{ 
+        const [usersSnap, reportsSnap, bookingsSnap] = await Promise.all([ 
+            db.collection('users').get(), 
+            db.collection('reports').get(), 
+            db.collection('bookings').get() 
+        ]); 
+        let pC=0,dC=0; 
+        usersSnap.forEach(doc=>{ const r=doc.data().role; if(r==='patient')pC++; else if(r==='doctor')dC++; }); 
+        statsPatients.textContent=pC; 
+        statsDoctors.textContent=dC; 
+        statsReports.textContent=reportsSnap.size; 
+        statsChats.textContent=bookingsSnap.size; 
+        console.log("Stats loaded OK."); 
+    } catch(error){ 
+        console.error("Stats Error:",error); 
+        // This is where your code fails if rules are wrong
+        ['stats-patients','stats-doctors','stats-reports','stats-chats'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent='Error'; }); 
+    } 
+}
+
+// --- 4.4. LOAD REPORT COUNTS ---
+async function loadReportCounts(){ 
+    console.log("Loading report counts..."); 
+    reportCounts={}; 
+    try{ 
+        const snap=await db.collection('reports').get(); 
+        snap.forEach(doc=>{ const uid=doc.data().uid; if(uid)reportCounts[uid]=(reportCounts[uid]||0)+1; }); 
+        console.log("Report counts loaded."); 
+    } catch(error){ 
+        console.error("Count Error:",error); 
+    } 
+}
+
+// --- 4.5. LOAD USERS ---
+async function loadUsersInternalOnly() {
+    console.log("Loading users internally...");
+    allUsersData = []; allDoctorsData = []; allAdminsData = [];
+    try {
+        const snap = await db.collection('users').orderBy('name').get();
+        snap.forEach(doc => {
+            const u = { id: doc.id, ...doc.data(), createdAt: doc.data().createdAt };
+            allUsersData.push(u);
+            const r = u.role || 'patient';
+            if (r === 'doctor') allDoctorsData.push(u);
+            if (r === 'admin') allAdminsData.push(u);
+        });
+        console.log("Internal user data arrays populated.");
+    } catch (error) {
+        console.error("Internal User Load Error:", error);
+    }
+}
+
+function updateUserListUI() {
+    console.log(`Updating user list UI with filter: ${currentUserFilter}...`);
+    if (!isInitialDataLoaded) { console.warn("Skipping UI update: Initial data not loaded."); return; }
+    allUsersListEl.innerHTML = '<div class="text-center p-4">Rendering list...</div>';
+
+    let html = '';
+    let userCount = 0;
+
+    allUsersData.forEach(u => {
+        const r = u.role || 'patient';
+        if (currentUserFilter !== 'all' && r !== currentUserFilter) { return; }
+
+        userCount++;
+        const rc = reportCounts[u.id] || 0;
+        let act = '', rep = '';
+        if (r === 'patient') {
+            rep = `<span class="reports-saved">(Reports: ${rc})</span>`;
+            act += `<button class="btn-sm btn-terminate" data-user-id="${u.id}" data-user-email="${u.email}">Terminate</button>`;
+        }
+        else if (r === 'doctor') {
+            act = `<button class="btn-sm btn-delete" data-user-id="${u.id}" data-user-email="${u.email}">Delete Doctor</button>`;
+        }
+        else if (r === 'admin') {
+            act = `<span class="text-sm font-bold text-primary">Admin</span>`;
+            if (u.id !== currentAdmin?.uid) {
+                act += `<button class="btn-sm btn-delete" data-user-id="${u.id}" data-user-email="${u.email}">Delete Admin</button>`;
+            } else {
+                act += ` (You)`;
+            }
+        }
+        html += `<div class="list-item glass-panel"><div class="list-item-info"><div class="text-white font-bold">${u.name || 'No Name Set'}</div><div class="text-sm text-gray-300">Email: ${u.email || 'N/A'}</div><div class="text-sm text-gray-300">Role: <span class="user-role">${r}</span> ${rep}</div></div><div class="list-item-actions">${act}</div></div>`;
+    });
+
+    if (allUsersData.length === 0) { allUsersListEl.innerHTML = '<div class="text-center p-4 text-gray-400">No users found in the database.</div>'; }
+    else if (userCount === 0 && currentUserFilter !== 'all') { allUsersListEl.innerHTML = `<div class="text-center p-4 text-gray-400">No users found with the role: ${currentUserFilter}.</div>`; }
+    else { allUsersListEl.innerHTML = html; }
+
+    const filterButtons = document.querySelectorAll('#user-filter-container .user-filter-btn');
+    filterButtons.forEach(btn => { btn.classList.toggle('active', btn.dataset.filter === currentUserFilter); });
+
+    console.log("User list UI updated.");
+}
+
+function applyUserFilter(filter) {
+    if (filter !== currentUserFilter) {
+        currentUserFilter = filter;
+        updateUserListUI();
+    }
+}
+
+
+// --- 4.6. USER ACTION HANDLERS ---
+allUsersListEl.addEventListener('click', async (e)=>{
+    const uid=e.target.dataset.userId; const uemail=e.target.dataset.userEmail; if(!uid)return;
+
+    const refreshUserDataAndUI = async () => {
+        await loadUsersInternalOnly();
+        updateUserListUI();
+        await loadDashboardStats();
+    };
+    
+    if(e.target.matches('.btn-terminate')){
+        if (!confirm(`PERMANENTLY DELETE patient (${uemail})? This action cannot be undone.`)) return;
+        try {
+            await db.collection('users').doc(uid).delete();
+            await logAdminAction('User Terminated', uemail);
+            alert(`Patient ${uemail} terminated.`);
+            await loadReportCounts();
+            await refreshUserDataAndUI();
+        } catch (error) {
+            console.error(`Terminate Error ${uemail}:`, error);
+            alert("Error:" + error.message);
+        }
+    } else if(e.target.matches('.btn-delete')){
+        if(uid===currentAdmin?.uid){ alert("Cannot delete self."); return; }
+        const uTD=allUsersData.find(u=>u.id===uid); const rTD=uTD?.role||'user';
+        if (!confirm(`PERMANENTLY DELETE ${rTD} (${uemail})? This action cannot be undone.`)) return;
+        try {
+            await db.collection('users').doc(uid).delete();
+            if (rTD === 'doctor') {
+                await db.collection('doctors').doc(uid).delete();
+            }
+            await logAdminAction(`User Deleted (${rTD})`, uemail);
+            alert(`${rTD} ${uemail} deleted.`);
+            await loadReportCounts();
+            await refreshUserDataAndUI();
+        } catch (error) {
+            console.error(`Delete Error ${uemail}:`, error);
+            alert("Error:" + error.message);
+        }
+    }
+});
+userFilterContainer.addEventListener('click', (e) => {
+    if (e.target.matches('.user-filter-btn')) {
+        const filter = e.target.dataset.filter;
+        applyUserFilter(filter);
+    }
+});
+
+
+// --- 4.7. CREATE DOCTOR ---
+createUserForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const n = document.getElementById('user-name').value.trim();
+    const em = document.getElementById('user-email').value.trim();
+    const p = document.getElementById('user-password').value;
+    const r = 'doctor';
+    if (!n || !em || !p || p.length < 6) {
+        alert("Fill fields. Pwd 6+ chars.");
+        return;
+    }
+
+    createUserBtn.disabled = true;
+    createUserBtn.textContent = 'Creating...';
+    try {
+        const uc = await auth.createUserWithEmailAndPassword(em, p);
+        const uid = uc.user.uid;
+        await uc.user.updateProfile({ displayName: n });
+        await db.collection('users').doc(uid).set({ name: n, email: em, role: r, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        const dSpec = settingDefaultSpec.value || "Not Set";
+        await db.collection('doctors').doc(uid).set({ name: n, specialization: dSpec, Hospital: "Not Set", isAvailable: false, languages: [], availability: [] });
+        await logAdminAction(`User Created (${r})`, em);
+        createUserForm.reset();
+        alert(`SUCCESS: ${r} account for ${em}.\nYou will be signed out.`);
+        await auth.signOut();
+    } catch (error) {
+        console.error("Create Error:", error);
+        let msg = error.message;
+        if (error.code === 'auth/email-already-in-use') msg = 'Email exists.';
+        else if (error.code === 'auth/weak-password') msg = 'Password weak.';
+        alert('Error:' + msg);
+        if (auth.currentUser) {
+            createUserBtn.disabled = false;
+            createUserBtn.textContent = 'Create Doctor Account';
+        }
+    }
+});
+
+
+// --- 4.8. GENERATE REPORTS LOGIC ---
+function populateReportFilterOptions(){
+    if (!isInitialDataLoaded) { console.log("Skipping report filter population: Initial data not loaded."); return; }
+    console.log("Populating report filter options...");
+    const type = reportTypeSelect.value;
+    let opt = '<option value="all">All</option>';
+    let showUserFilter = false;
+
+    if (type === 'doctor-activity') {
+        if(allDoctorsData.length > 0) { allDoctorsData.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(d=>opt+=`<option value="${d.id}">${d.name||d.email}</option>`); showUserFilter = true; } else { opt='<option value="all">No Doctors</option>'; }
+    } else if (type === 'patient-activity') {
+        const p = allUsersData.filter(u => u.role === 'patient');
+        if(p.length > 0) { p.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(pt=>opt+=`<option value="${pt.id}">${pt.name||pt.email}</option>`); showUserFilter = true; } else { opt='<option value="all">No Patients</option>'; }
+    } else if (type === 'admin-log') {
+        if(allAdminsData.length > 0) { allAdminsData.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(a=>opt+=`<option value="${a.email}">${a.name||a.email}</option>`); showUserFilter = true; opt=opt.replace('>All<','>All Admins<'); } else { opt='<option value="all">No Admins</option>'; }
+    }
+
+    reportFilterSelect.innerHTML = opt;
+    reportFilterSelect.disabled = !showUserFilter;
+    reportUserFilterGroup.classList.toggle('hidden', !showUserFilter);
+    reportFilterSelect.options[0].textContent = (type === 'admin-log') ? 'All Admins' : 'All Users';
+}
+
+async function generateReport() {
+    if (!isInitialDataLoaded) { console.log("Skipping report generation: Initial data not loaded yet."); reportTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-gray-400">Waiting for initial data...</td></tr>`; downloadPdfBtn.disabled = true; return; }
+
+    const rt = reportTypeSelect.value;
+    const fv = reportFilterSelect.value;
+    const dr = reportDateRangeSelect.value;
+
+    reportLoadingEl.classList.remove('hidden');
+    reportTableHead.innerHTML = '';
+    reportTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Generating...</td></tr>';
+    reportTitleEl.textContent = 'Results';
+    downloadPdfBtn.disabled = true;
+    currentReportData = { headers: [], rows: [] };
+
+    setTimeout(async () => {
+        try {
+            let q;
+            let res = [];
+            let hdr = [];
+            const now = new Date();
+            let sd = null; let ed = null;
+
+            if (dr === 'last-7-days') { sd = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); }
+            else if (dr === 'last-30-days') { sd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); }
+            else if (dr === 'last-month') { const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1); ed = firstDayCurrentMonth; sd = new Date(now.getFullYear(), now.getMonth() - 1, 1); }
+
+            const sTs = sd ? firebase.firestore.Timestamp.fromDate(sd) : null;
+            const eTs = ed ? firebase.firestore.Timestamp.fromDate(ed) : null;
+
+            // --- Build Query ---
+            if (rt === 'user-list') {
+                console.log("Querying User List Report..."); hdr = ["Name", "Email", "Role", "Joined Date"]; q = db.collection('users'); if (sTs) q = q.where('createdAt', '>=', sTs); if (eTs) q = q.where('createdAt', '<', eTs); q = q.orderBy('createdAt', 'desc');
+                const snap = await q.get(); snap.forEach(doc => { const u = doc.data(); res.push([ u.name || 'N/A', u.email || 'N/A', u.role || 'patient', u.createdAt?.toDate().toLocaleDateString() || 'Unknown' ]); }); reportTitleEl.textContent = `User List (${dr.replace(/-/g, ' ')})`;
+            } else if(rt === 'doctor-activity') {
+                console.log("Querying Doctor Activity Report..."); hdr=["Doctor","Completed Sessions","Range"]; q=db.collection('bookings').where('status','==','completed'); if(fv!=='all') q=q.where('doctorId','==',fv); if(sTs) q=q.where('createdAt','>=',sTs); if(eTs) q = q.where('createdAt', '<', eTs);
+                const snap=await q.orderBy('createdAt', 'desc').get(); const sbd={}; snap.forEach(doc=>{const b=doc.data();sbd[b.doctorId]=(sbd[b.doctorId]||0)+1;});
+                res=Object.entries(sbd).map(([dId,c])=>{ const d=allDoctorsData.find(x=>x.id===dId); return[d?.name||`? (${dId.slice(0,5)})`,c,dr.replace(/-/g,' ')]}); if(res.length===0&&fv!=='all'){ const d=allDoctorsData.find(x=>x.id===fv); if(d) res.push([d.name||`? (${fv.slice(0,5)})`,0,dr.replace(/-/g,' ')]); } reportTitleEl.textContent=`Doctor Activity (${dr.replace(/-/g,' ')})`;
+            } else if (rt === 'patient-activity') {
+                console.log("Querying Patient Activity Report..."); hdr=["Patient","Reports Saved","Range"]; q=db.collection('reports'); if(fv!=='all') q=q.where('uid','==',fv); if(sTs) q=q.where('createdAt','>=',sTs); if(eTs) q = q.where('createdAt', '<', eTs);
+                const snap=await q.orderBy('createdAt', 'desc').get(); const rbp={}; snap.forEach(doc=>{const r=doc.data();rbp[r.uid]=(rbp[r.uid]||0)+1;});
+                res=Object.entries(rbp).map(([pId,c])=>{ const p=allUsersData.find(u=>u.id===pId&&u.role==='patient'); return p?[p.name||`? (${pId.slice(0,5)})`,c,dr.replace(/-/g,' ')]:null; }).filter(r=>r!==null); if(res.length===0&&fv!=='all'){ const p=allUsersData.find(u=>u.id===fv&&u.role==='patient'); if(p)res.push([p.name||`? (${fv.slice(0,5)})`,0,dr.replace(/-/g,' ')]); } reportTitleEl.textContent=`Patient Reports (${dr.replace(/-/g,' ')})`;
+            } else if (rt === 'admin-log') {
+                console.log("Querying Admin Log Report..."); hdr=["Timestamp","Action","Admin","Target"]; q=db.collection('admin_logs'); if (fv !== 'all') q = q.where('adminEmail', '==', fv); if (sTs) q = q.where('timestamp', '>=', sTs); if (eTs) q = q.where('timestamp', '<', eTs);
+                q = q.orderBy('timestamp', 'desc').limit(100);
+                const snap=await q.get(); snap.forEach(doc=>{ const log=doc.data(); res.push([ log.timestamp?.toDate().toLocaleString()||'?', log.action||'?', log.adminEmail||'?', log.targetUserEmail||'N/A' ]); }); reportTitleEl.textContent=`Admin Log (${dr.replace(/-/g, ' ')})`;
+            }
+
+            // --- Render Results ---
+            if(hdr.length > 0) { reportTableHead.innerHTML=`<tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr>`; } else { reportTableHead.innerHTML=''; }
+            if(res.length > 0) { reportTableBody.innerHTML=res.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join(''); currentReportData = { headers: hdr, rows: res }; downloadPdfBtn.disabled = false; }
+            else { reportTableBody.innerHTML=`<tr><td colspan="${hdr.length||1}" class="text-center text-gray-400">No data found for this query.</td></tr>`; downloadPdfBtn.disabled = true; }
+
+        } catch(error) {
+            console.error("Report Generation Error (async):", error);
+            let msg = error.message;
+            if (error.code === 'failed-precondition' && msg.includes('index')) {
+                 if (rt === 'user-list' && (sTs || eTs)) { msg = `Filtering User List by date requires 'createdAt' field and Firestore index. Check console (F12) for index link. Error: ${msg}`; }
+                 else { const linkMatch = msg.match(/https?:\/\/[^\s]+/); if (linkMatch && linkMatch[0].includes('google.com')) { msg = `Query requires index: <a href="${linkMatch[0]}" target="_blank" rel="noopener noreferrer" class="text-primary underline">Create Index</a>. Wait, then try again.`; } else { msg = `Query requires Firestore index. Check console (F12). Error: ${msg}`; } }
+                 reportTableBody.innerHTML = `<tr><td colspan="${hdr.length||4}" class="text-center text-red-400 p-4">${msg}</td></tr>`;
+            } else {
+                 reportTableBody.innerHTML = `<tr><td colspan="${hdr.length||4}" class="text-center text-red-400 p-4">Error generating report. Check console (F12) for details.</td></tr>`;
+            }
+            downloadPdfBtn.disabled = true;
+        } finally {
+            reportLoadingEl.classList.add('hidden');
+            console.log("Report generation finished.");
+        }
+    }, 50);
+}
+
+
+// --- 4.9. DOWNLOAD PDF ---
+function downloadPdf() { if (!currentReportData.rows.length) { alert("No report data."); return; } const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.setFontSize(16); doc.text(reportTitleEl.textContent || "Report", 14, 16); doc.autoTable({ head: [currentReportData.headers], body: currentReportData.rows, startY: 22, theme: 'grid', headStyles: { fillColor: [74, 144, 226] }, styles: { fontSize: 8 } }); const dateStr = new Date().toISOString().slice(0, 10); const reportName = reportTypeSelect.options[reportTypeSelect.selectedIndex].text.replace(/[^a-z0.9]/gi, '_').toLowerCase(); const filename = `mammocare_report_${reportName}_${dateStr}.pdf`; doc.save(filename); }
+downloadPdfBtn.addEventListener('click', downloadPdf);
+
+// --- 4.10. SETTINGS LOAD/SAVE ---
+const settingsDocRef=db.collection('settings').doc('config');
+async function loadSettings(){
+    console.log("Loading settings...");
+    try{
+        const doc=await settingsDocRef.get();
+        if(doc.exists){
+            const s=doc.data();
+            console.log("Settings:",s);
+            settingBackendUrl.value=s.detectionBackendUrl||'';
+            detectionBackendUrl = s.detectionBackendUrl||'';
+            settingContactEmail.value=s.contactEmail||'';
+            settingMaintenanceMsg.value=s.maintenanceMessage||'';
+            settingDefaultSpec.value=s.defaultDoctorSpecialization||'';
+        } else {
+            console.log("Settings doc missing.");
+        }
+    } catch(error){ console.error("Settings Load Error:",error); }
+}
+settingsForm.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    saveSettingsBtn.disabled=true;
+    saveSettingsBtn.textContent='Saving...';
+
+    const newBackendUrl = settingBackendUrl.value.trim();
+    const d={
+        detectionBackendUrl: newBackendUrl,
+        contactEmail:settingContactEmail.value.trim(),
+        maintenanceMessage:settingMaintenanceMsg.value.trim(),
+        defaultDoctorSpecialization:settingDefaultSpec.value.trim()
+    };
+
+    try{
+        await settingsDocRef.set(d,{merge:true});
+        detectionBackendUrl = newBackendUrl;
+        await logAdminAction('System Settings Updated');
+        alert("Settings saved!");
+        console.log("Settings saved:",d);
+    } catch(error){ console.error("Settings Save Error:",error); alert("Error:"+error.message); }
+    finally { saveSettingsBtn.disabled=false; saveSettingsBtn.textContent='Save Settings'; }
+});
+
+</script>
+</body>
+</html>
