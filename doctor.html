@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Doctor Dashboard - MAMMOCARE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+  /* --- STYLES FROM YOUR INDEX.HTML --- */
+  body{font-family:"Space Grotesk",sans-serif;background:linear-gradient(to bottom,#0D1B2A,#1B263B);color:#fff; min-height: 100vh;}
+  .glass-panel{background:rgba(255,255,255,.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);}
+  #particle-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:-1;}
+  .hidden-section{display:none}.active-section{display:block}
+  .hidden { display: none; } /* Added utility class */
+  
+  /* --- DASHBOARD-SPECIFIC STYLES --- */
+  #loading-overlay {
+    position: fixed; inset: 0; background: linear-gradient(to bottom, #0D1B2A, #1B263B);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+    flex-direction: column; gap: 1rem; font-size: 1.25rem; font-weight: 500;
+  }
+  .spinner {
+    width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #4A90E2; border-radius: 50%; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dashboard-content { display: none; }
+
+  /* --- Navigation Button Styles --- */
+  .header-nav-btn {
+    background: none; border: none; color: #fff; font-size: 0.875rem; font-weight: 500;
+    cursor: pointer; transition: color 0.2s ease; position: relative;
+  }
+  .header-nav-btn:hover { color: #4A90E2; }
+  .header-nav-btn.active { color: #4A90E2; font-weight: 700; }
+  .notif-badge {
+    position: absolute; top: -5px; right: -10px; background-color: #e11d48;
+    color: white; font-size: 0.75rem; font-weight: bold; border-radius: 9999px;
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  }
+  
+  /* --- Content-specific styles --- */
+  .content-section h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+  .content-section p { color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; }
+  
+  /* --- Form Styles (for Profile) --- */
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.875rem; font-weight: 500; color: #cbd5e1; margin-bottom: 0.5rem; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; background-color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem; color: #111; font-size: 1rem; padding: 0.75rem 1rem;
+  }
+  /* --- Checkbox style for availability --- */
+  .form-input[type="checkbox"] {
+    width: 1.15em; height: 1.15em; background-color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 0.25rem; color: #4A90E2;
+  }
+  .form-input[type="checkbox"]:checked { background-color: #4A90E2; border-color: #357ABD; }
+  
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.3);
+  }
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; border-radius: 0.75rem;
+    height: 3rem; padding-left: 1.5rem; padding-right: 1.5rem; background-color: #4A90E2;
+    color: #fff; font-size: 1rem; font-weight: 700; border: none; cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .btn-primary:hover { background-color: #357ABD; }
+  .btn-primary:disabled { background-color: #357ABD; cursor: not-allowed; opacity: 0.7; }
+  
+  /* --- Styles for Bookings/Reports List --- */
+  .list-item {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    padding: 1rem; border-radius: 0.75rem; margin-top: 0.75rem;
+  }
+  .list-item-actions {
+    display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; margin-left: auto;
+  }
+  .list-item-actions .btn-sm {
+    background: rgba(255,255,255,.1); border: none; color: #fff; padding: 6px 12px;
+    border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+  }
+  .list-item-actions .btn-sm.btn-accept { background: #16a34a; }
+  .list-item-actions .btn-sm.btn-view { background: #4A90E2; }
+  .list-item-actions .btn-sm.btn-delete { background: #e11d48; }
+  .list-item-actions .btn-sm.btn-chat { background: #16a34a; } /* Green */
+  .list-item-actions .btn-sm.btn-complete { background: #6b7280; } /* Gray */
+  
+  /* --- Report Modal Styles --- */
+  .modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 50;
+    display: none; align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal.is-open { display: flex; }
+  .modal-content {
+    background: linear-gradient(to bottom,#0D1B2A,#1B263B); border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 1rem; padding: 1.5rem; width: 100%; max-width: 2xl;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .modal-close-btn { background: none; border: none; color: #fff; font-size: 2rem; font-weight: bold; cursor: pointer; line-height: 1; }
+  .report-details ul { list-style-type: disc; padding-left: 1.5rem; color: #cbd5e1; }
+  
+  /* --- CHAT POPUP STYLES --- */
+  #chat-popup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    max-width: 90vw;
+    height: 450px;
+    max-height: 70vh;
+    z-index: 1000;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+  #chat-header {
+    background-color: #4A90E2;
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  #chat-close-btn {
+    background: none; border: none; color: white;
+    font-size: 1.5rem; font-weight: bold; cursor: pointer; line-height: 1;
+  }
+  #chat-messages {
+    flex-grow: 1;
+    padding: 0.75rem;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.9); /* Light background for chat */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .chat-message {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    max-width: 80%;
+    word-wrap: break-word;
+    color: #111; /* Dark text */
+  }
+  .chat-message.sent {
+    background-color: #dbeafe; /* Blue 100 */
+    align-self: flex-end;
+    border-bottom-right-radius: 0.25rem;
+  }
+  .chat-message.received {
+    background-color: #e5e7eb; /* Gray 200 */
+    align-self: flex-start;
+    border-bottom-left-radius: 0.25rem;
+  }
+  
+  /* --- NEW: Styles for file attachments in chat --- */
+  .chat-message.attachment a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f3f4f6; /* Lighter gray */
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #1f2937; /* Darker text */
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .chat-message.attachment a:hover {
+    background-color: #e5e7eb;
+  }
+  .chat-message.attachment img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  /* --- MODIFIED: Chat Form Styles --- */
+  #chat-form {
+    display: flex;
+    align-items: center; /* Vertically align items */
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    flex-shrink: 0;
+  }
+  
+  /* --- NEW: Attach Button Style --- */
+  #chat-attach-btn {
+    background: none;
+    border: none;
+    color: #4A90E2;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  #chat-attach-btn:hover { background-color: #dbeafe; } /* Light blue hover */
+
+  #chat-input {
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: #111; /* Dark text */
+  }
+  #chat-input:focus { outline: none; border-color: #4A90E2; }
+  #chat-send-btn {
+    background: #4A90E2;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #chat-send-btn:hover { background-color: #357ABD; }
+</style>
+<script>
+  tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:"#4A90E2","background-dark":"#0D1B2A"},fontFamily:{display:["Space Grotesk"]},borderRadius:{DEFAULT:"0.75rem",lg:"1rem",xl:"1.5rem",full:"9999px"}}}};
+</script>
+</head>
+<body class="bg-background-dark font-display">
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div>Loading Doctor Portal...</div>
+</div>
+
+<div id="dashboard-content" class="dashboard-content">
+  <canvas id="particle-canvas"></canvas>
+  <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+    <div class="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+      <div class="flex flex-col max-w-[1024px] flex-1">
+        
+        <header class="flex items-center justify-between whitespace-nowrap px-6 py-4 rounded-xl glass-panel sticky top-5 z-10">
+          <div class="flex items-center gap-4 text-white">
+            <div class="size-6 text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><path fill="currentColor" d="M24 .757 47.243 24 24 47.243.757 24 24 .757ZM21 35.757V12.243L9.243 24 21 35.757Z"/></svg>
+            </div>
+            <h2 class="text-white text-xl font-bold tracking-[-0.015em]">MAMMOCARE DOCTOR</h2>
+          </div>
+          
+          <nav class="hidden md:flex flex-1 justify-end gap-8" aria-label="Main">
+            <button data-route="bookings" class="header-nav-btn active">
+              Bookings
+              <span id="booking-notif" class="notif-badge hidden"></span>
+            </button>
+            <button data-route="reports" class="header-nav-btn">Shared Reports</button>
+            <button data-route="profile" class="header-nav-btn">My Profile</button>
+            <button id="signOutBtn" class="flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold"><span class="truncate">Sign Out</span></button>
+          </nav>
+          
+          <div class="md:hidden"><button id="mobileMenuBtn" class="text-white"><span class="material-symbols-outlined">menu</span></button></div>
+        </header>
+
+        <div id="mobileMenu" class="glass-panel rounded-xl mt-3 p-4 md:hidden hidden">
+          <div class="grid gap-2">
+            <button data-route="bookings" class="header-nav-btn text-left active">Bookings</button>
+            <button data-route="reports" class="header-nav-btn text-left">Shared Reports</button>
+            <button data-route="profile" class="header-nav-btn text-left">My Profile</button>
+            <button id="signOutBtnMobile" class="mt-2 flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Sign Out</button>
+          </div>
+        </div>
+
+        <main class="flex-1 mt-6">
+          <div class="glass-panel rounded-xl p-6">
+            <h1 class="text-3xl font-bold">Welcome, <span id="doctor-name">Doctor</span>!</h1>
+            <p class="text-gray-300 mt-1">This is your private doctor dashboard.</p>
+            
+            <div class="mt-4 flex items-center gap-4 p-3 rounded-lg bg-white/5">
+                <span class="text-white font-bold">Current Availability:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="availability-toggle" value="" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                    <span id="availability-status-text" class="ms-3 text-sm font-medium text-white">Loading...</span>
+                </label>
+            </div>
+          </div>
+          
+          <section id="bookings" class="active-section mt-6">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">Patient Bookings</h2>
+              <p class="text-gray-300">Accept requests to allow patients to share reports and chat.</p>
+              <div id="booking-list" class="mt-4">
+                <div class="text-center p-4">Loading requests...</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="reports" class="hidden-section mt-6">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">Shared Patient Reports</h2>
+              <p class="text-gray-300">View reports that patients have shared with you. (Notes are private to you).</p>
+              <div id="reports-list" class="mt-4">
+                <div class="text-center p-4">Loading reports...</div>
+              </div>
+            </div>
+          </section>
+          
+          <section id="profile" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">Update Your Profile</h2>
+              <p class="text-gray-300">This information is shown to patients in the "Book a Doctor" list.</p>
+              
+              <form id="profile-form" class="mt-6">
+                <div class="form-group">
+                  <label for="prof-name" class="form-label">Full Name (e.g. Dr. John Doe)</label>
+                  <input type="text" id="prof-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="prof-spec" class="form-label">Specialization (e.g. Oncologist)</label>
+                  <input type="text" id="prof-spec" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="prof-hospital" class="form-label">Hospital (e.g. Asiri Hospital)</label>
+                  <input type="text" id="prof-hospital" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="prof-langs" class="form-label">Languages (comma-separated: English, Tamil)</label>
+                  <input type="text" id="prof-langs" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="prof-avail" class="form-label">Availability (comma-separated: Monday, Wednesday)</label>
+                  <input type="text" id="prof-avail" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="prof-image" class="form-label">Profile Image Path (from Storage, e.g. "doctors/doc1.jpg")</label>
+                  <input type="text" id="prof-image" class="form-input" placeholder="doctors/my-image.jpg">
+                </div>
+                
+                <button type="submit" id="profile-save-btn" class="btn-primary">Save Changes</button>
+              </form>
+            </div>
+          </section>
+          
+          <div id="report-modal" class="modal">
+             <div class="modal-content">
+                <div class="modal-header">
+                   <h2 class="text-2xl font-bold">Patient Report</h2>
+                   <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+                
+                <div id="modal-content-body" class="report-details content-section">
+                  <p>Loading report details...</p>
+                </div>
+                
+                <div class="mt-6">
+                  <label for="doctor-notes" class="form-label">Your Private Notes (visible only to you)</label>
+                  <textarea id="doctor-notes" class="form-textarea" rows="4" placeholder="Add notes here..."></textarea>
+                  <button id="modal-save-notes" class="btn-primary mt-2">Save Notes</button>
+                </div>
+             </div>
+          </div>
+
+        </main>
+      </div>
+    </div>
+  </div>
+</div> 
+
+<div id="chat-popup" class="glass-panel">
+  <div id="chat-header">
+    <span id="chat-with-name">Chat</span>
+    <button id="chat-close-btn">&times;</button>
+  </div>
+  <div id="chat-messages">
+    </div>
+  <form id="chat-form">
+    <input type="file" id="chat-file-input" class="hidden" accept="image/*,application/pdf">
+    
+    <button type="button" id="chat-attach-btn">
+      <span class="material-symbols-outlined !text-xl !font-bold">attach_file</span>
+    </button>
+    
+    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+    
+    <button type="submit" id="chat-send-btn">
+      <span class="material-symbols-outlined !text-xl !font-bold">send</span>
+    </button>
+  </form>
+</div>
+
+<script>
+  // ... unchanged particle code ...
+  const canvasBg = document.getElementById('particle-canvas');
+  if(canvasBg){const ctx=canvasBg.getContext('2d');function sizeCanvas(){canvasBg.width=window.innerWidth;canvasBg.height=window.innerHeight;}
+  sizeCanvas();let particles=[];const particleCount=50;class Particle{constructor(){this.x=Math.random()*canvasBg.width;this.y=Math.random()*canvasBg.height;this.size=Math.random()*2+1;this.speedX=Math.random()*0.5-0.25;this.speedY=Math.random()*0.5-0.25;this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')';}
+  update(){if(this.x>canvasBg.width||this.x<0)this.speedX*=-1;if(this.y>canvasBg.height||this.y<0)this.speedY*=-1;this.x+=this.speedX;this.y+=this.speedY;}
+  draw(){ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill();}}
+  function init(){particles=[];for(let i=0;i<particleCount;i++){particles.push(new Particle());}}
+  function connect(){let o=1;for(let a=0;a.length;a++){for(let b=a;b<particles.length;b++){const dx=particles[a].x-particles[b].x;const dy=particles[a].y-particles[b].y;const d=Math.sqrt(dx*dx+dy*dy);if(d<120){o=1-d/120;ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(particles[a].x,particles[a].y);ctx.lineTo(particles[b].x,particles[b].y);ctx.stroke();}}}}
+  function animate(){ctx.clearRect(0,0,canvasBg.width,canvasBg.height);for(const p of particles){p.update();p.draw();}
+  connect();requestAnimationFrame(animate);}
+  window.addEventListener('resize',()=>{sizeCanvas();init();});init();animate();}
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+
+<script>
+  // --- YOUR FIREBASE KEYS ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPJIH_83r_6ImQ_Oa8JU3OVvMkw3I5Mmw",
+    authDomain: "mammocare-backend.firebaseapp.com",
+    projectId: "mammocare-backend",
+    storageBucket: "mammocare-backend.firebasestorage.app",
+    messagingSenderId: "187598388703",
+    appId: "1:187598388703:web:f6e442aa544953917e586a",
+    measurementId: "G-WRK53QYD0H"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+  let currentDoctor = null;
+</script>
+
+<script>
+  // --- Page Elements ---
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const dashboardContent = document.getElementById('dashboard-content');
+  const doctorNameEl = document.getElementById('doctor-name');
+  const signOutBtn = document.getElementById('signOutBtn');
+  const signOutBtnMobile = document.getElementById('signOutBtnMobile');
+  
+  const routeButtons = document.querySelectorAll('[data-route]');
+  const sections = ['bookings', 'reports', 'profile'];
+  
+  const bookingListEl = document.getElementById('booking-list');
+  const bookingNotifEl = document.getElementById('booking-notif');
+  const reportsListEl = document.getElementById('reports-list');
+  
+  // Profile Form
+  const profileForm = document.getElementById('profile-form');
+  const profileSaveBtn = document.getElementById('profile-save-btn');
+  const profName = document.getElementById('prof-name');
+  const profSpec = document.getElementById('prof-spec');
+  const profHospital = document.getElementById('prof-hospital');
+  const profLangs = document.getElementById('prof-langs');
+  const profAvail = document.getElementById('prof-avail');
+  const profImage = document.getElementById('prof-image');
+  
+  // Modal Elements
+  const reportModal = document.getElementById('report-modal');
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+  const modalContentBody = document.getElementById('modal-content-body');
+  const modalSaveNotes = document.getElementById('modal-save-notes');
+  const doctorNotesEl = document.getElementById('doctor-notes');
+  let currentReportId = null; 
+  
+  // --- CHAT POPUP ELEMENTS (MODIFIED) ---
+  const chatPopup = document.getElementById('chat-popup');
+  const chatWithName = document.getElementById('chat-with-name');
+  const chatCloseBtn = document.getElementById('chat-close-btn');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatAttachBtn = document.getElementById('chat-attach-btn'); // NEW
+  const chatFileInput = document.getElementById('chat-file-input'); // NEW
+  
+  let currentChatBookingId = null; 
+  let unsubscribeMessages = null; 
+  // --- END OF CHAT ELEMENTS ---
+
+  // --- AVAILABILITY ELEMENTS ---
+  const availabilityToggle = document.getElementById('availability-toggle');
+  const availabilityStatusText = document.getElementById('availability-status-text');
+  
+  // --- 1. AUTHENTICATION (Unchanged) ---
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      if (userDoc.exists && userDoc.data().role === 'doctor') {
+        currentDoctor = user;
+        doctorNameEl.textContent = user.displayName || 'Doctor';
+        
+        loadBookings(user.uid);
+        loadSharedReports(user.uid);
+        loadProfile(user.uid);
+        loadAvailability(user.uid);
+        
+        dashboardContent.style.display = 'block';
+        loadingOverlay.style.display = 'none';
+      } else {
+        await auth.signOut();
+        alert('Access Denied. This portal is for doctors only.');
+        window.location.href = 'doctor-login.html';
+      }
+    } else {
+      window.location.href = 'doctor-login.html';
+    }
+  });
+
+  // --- Sign Out & Nav (Unchanged) ---
+  function handleSignOut() { auth.signOut().then(() => { window.location.href = 'doctor-login.html'; }); }
+  signOutBtn.addEventListener('click', handleSignOut);
+  signOutBtnMobile.addEventListener('click', handleSignOut);
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (mobileBtn && mobileMenu) mobileBtn.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
+  function show(route){
+    sections.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.toggle('active-section', id===route);
+      el.classList.toggle('hidden-section', id!==route);
+    });
+    routeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-route') === route);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  routeButtons.forEach(btn=>{ btn.addEventListener('click', ()=> show(btn.getAttribute('data-route'))); });
+
+  // --- 3. FEATURE: Load Bookings (Unchanged) ---
+  async function loadBookings(doctorId) {
+    bookingListEl.innerHTML = '<div class="text-center p-4">Loading...</div>';
+    
+    db.collection('bookings')
+      .where('doctorId', '==', doctorId)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(querySnapshot => {
+        if (querySnapshot.empty) {
+          bookingListEl.innerHTML = '<div class="text-center p-4 text-gray-400">No booking requests found.</div>';
+          bookingNotifEl.classList.add('hidden');
+          return;
+        }
+        
+        let html = '';
+        let pendingCount = 0;
+        
+        querySnapshot.forEach(doc => {
+          const booking = { id: doc.id, ...doc.data() };
+          const date = booking.createdAt?.toDate().toLocaleString() || 'Unknown date';
+          
+          let actionsHtml = '';
+          if (booking.status === 'pending') {
+            pendingCount++;
+            actionsHtml = `
+              <button class="btn-sm btn-accept" data-booking-id="${booking.id}">Accept</button>
+              <button class="btn-sm btn-delete" data-booking-id="${booking.id}">Decline</button>
+            `;
+          } else if (booking.status === 'accepted') {
+            actionsHtml = `
+              <button class="btn-sm btn-chat" 
+                      data-booking-id="${booking.id}" 
+                      data-patient-name="${booking.patientName}">
+                Chat
+              </button>
+              <button class="btn-sm btn-complete" 
+                      data-booking-id="${booking.id}">
+                Complete Session
+              </button>
+            `;
+          } else if (booking.status === 'completed') {
+             actionsHtml = `<span class="text-gray-400 font-bold">Session Completed</span>`;
+          }
+          
+          html += `
+            <div class="list-item glass-panel">
+              <div>
+                <div class="text-white font-bold">${booking.patientName}</div>
+                <div class="text-sm text-gray-300">Email: ${booking.patientEmail}</div>
+                <div class="text-sm text-gray-300">Requested: ${date}</div>
+              </div>
+              <div class="list-item-actions">
+                ${actionsHtml}
+              </div>
+            </div>
+          `;
+        });
+        
+        bookingListEl.innerHTML = html;
+        
+        if (pendingCount > 0) {
+          bookingNotifEl.textContent = pendingCount;
+          bookingNotifEl.classList.remove('hidden');
+        } else {
+          bookingNotifEl.classList.add('hidden');
+        }
+        
+      }, error => {
+        console.error("Error loading bookings:", error);
+        bookingListEl.innerHTML = `<div class="text-center p-4 text-red-400">Error loading requests.</div>`;
+      });
+  }
+  
+  // --- BOOKING ACTIONS (Unchanged) ---
+  bookingListEl.addEventListener('click', async (e) => {
+    // Handle Accept
+    if (e.target.matches('.btn-accept')) {
+      const bookingId = e.target.dataset.bookingId;
+      if (!confirm('Accept this patient? They will now be able to share reports and chat with you.')) return;
+      try {
+        await db.collection('bookings').doc(bookingId).update({ status: 'accepted' });
+      } catch (error) { alert('Error accepting: ' + error.message); }
+    }
+    
+    // Handle Decline (Delete)
+    if (e.target.matches('.btn-delete')) {
+      const bookingId = e.target.dataset.bookingId;
+      if (!confirm('Decline and delete this request?')) return;
+      try {
+        await db.collection('bookings').doc(bookingId).delete();
+      } catch (error) { alert('Error declining: ' + error.message); }
+    }
+    
+    // Handle Complete Session
+    if (e.target.matches('.btn-complete')) {
+      const bookingId = e.target.dataset.bookingId;
+      if (!confirm('Complete this session? The patient will no longer be able to chat.')) return;
+      try {
+        await db.collection('bookings').doc(bookingId).update({ status: 'completed' });
+        if (currentChatBookingId === bookingId) {
+          closeChat();
+        }
+      } catch (error) { alert('Error completing: ' + error.message); }
+    }
+    
+    // Handle CHAT button click
+    if (e.target.matches('.btn-chat')) {
+      const bookingId = e.target.dataset.bookingId;
+      const patientName = e.target.dataset.patientName;
+      openChat(bookingId, patientName);
+    }
+  });
+  
+  // --- 4. Load Shared Reports & Modal Logic (Unchanged) ---
+  async function loadSharedReports(doctorId) {
+    reportsListEl.innerHTML = '<div class="text-center p-4">Loading...</div>';
+    
+    db.collection('reports')
+      .where('sharedWith', 'array-contains', doctorId)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(async querySnapshot => {
+        if (querySnapshot.empty) {
+          reportsListEl.innerHTML = '<div class="text-center p-4 text-gray-400">No reports have been shared with you yet.</div>';
+          return;
+        }
+        
+        const reportPromises = querySnapshot.docs.map(async doc => {
+          const report = { id: doc.id, ...doc.data() };
+          const date = report.createdAt?.toDate().toLocaleString() || 'Unknown date';
+          let patientName = report.patientName || 'Unknown Patient'; 
+          
+          if (patientName === 'Unknown Patient') {
+              try {
+                const patientDoc = await db.collection('users').doc(report.uid).get();
+                if (patientDoc.exists) {
+                  patientName = patientDoc.data().name || 'Patient';
+                }
+              } catch (err) { /* ignore */ }
+          }
+          
+          return `
+            <div class="list-item glass-panel">
+              <div>
+                <div class="text-white font-bold">${report.fileName}</div>
+                <div class="text-sm text-gray-300">Patient: ${patientName}</div>
+                <div class="text-sm text-primary font-bold">
+                  Top Finding: ${report.topClass} (${report.confidence})
+                </div>
+              </div>
+              <div class="list-item-actions">
+                <button class="btn-sm btn-view" data-report-id="${report.id}">View & Add Notes</button>
+              </div>
+            </div>
+          `;
+        });
+        
+        const html = (await Promise.all(reportPromises)).join('');
+        reportsListEl.innerHTML = html;
+        
+      }, error => {
+        console.error("Error loading shared reports:", error);
+        reportsListEl.innerHTML = `<div class="text-center p-4 text-red-400">Error loading reports.</div>`;
+      });
+  }
+  
+  reportsListEl.addEventListener('click', async (e) => {
+    if (e.target.matches('.btn-view')) {
+      const reportId = e.target.dataset.reportId;
+      currentReportId = reportId; 
+      
+      modalContentBody.innerHTML = '<p>Loading report details...</p>';
+      doctorNotesEl.value = '';
+      reportModal.classList.add('is-open');
+      
+      try {
+        const reportDoc = await db.collection('reports').doc(reportId).get();
+        if (!reportDoc.exists) throw new Error('Report not found');
+        
+        const report = reportDoc.data();
+        
+        const notesDoc = await db.collection('reports').doc(reportId)
+                                 .collection('doctorNotes').doc(currentDoctor.uid).get();
+        if (notesDoc.exists) {
+          doctorNotesEl.value = notesDoc.data().notes || '';
+        }
+        
+        let imageUrl = 'https://via.placeholder.com/400';
+        if (report.storagePath) {
+            try {
+                imageUrl = await storage.ref(report.storagePath).getDownloadURL();
+            } catch(e) { console.warn("Could not load image URL"); }
+        }
+
+        let detectionsHtml = (report.detections || []).map(p => 
+          `<li>${p.class}: ${(p.confidence * 100).toFixed(1)}%</li>`
+        ).join('');
+        
+        modalContentBody.innerHTML = `
+          <img src="${imageUrl}" alt="Mammogram" class="w-full rounded-lg mb-4 bg-black/30">
+          <p><strong>File:</strong> ${report.fileName}</p>
+          <p><strong>Top Finding:</strong> ${report.topClass} (${report.confidence})</p>
+          <strong class="block mt-4">All Detections:</strong>
+          <ul>${detectionsHtml || '<li>None</li>'}</ul>
+        `;
+        
+      } catch (error) {
+        modalContentBody.innerHTML = `<p class="text-red-400">Error loading report: ${error.message}</p>`;
+      }
+    }
+  });
+  
+  modalCloseBtn.addEventListener('click', () => {
+    reportModal.classList.remove('is-open');
+    currentReportId = null;
+  });
+  
+  modalSaveNotes.addEventListener('click', async () => {
+    if (!currentReportId || !currentDoctor) return;
+    
+    modalSaveNotes.textContent = 'Saving...';
+    modalSaveNotes.disabled = true;
+    
+    try {
+      const notesRef = db.collection('reports').doc(currentReportId)
+                         .collection('doctorNotes').doc(currentDoctor.uid);
+      
+      await notesRef.set({
+        notes: doctorNotesEl.value,
+        doctorName: currentDoctor.displayName
+      }, { merge: true });
+      
+      alert('Notes saved!');
+      
+    } catch (error) {
+      alert('Error saving notes: ' + error.message);
+    }
+    
+    modalSaveNotes.textContent = 'Save Notes';
+    modalSaveNotes.disabled = false;
+  });
+
+  // --- 5. Profile (Unchanged) ---
+  async function loadProfile(doctorId) {
+    try {
+      const docRef = db.collection('doctors').doc(doctorId);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const data = doc.data();
+        profName.value = data.name || '';
+        profSpec.value = data.specialization || '';
+        profHospital.value = data.Hospital || ''; 
+        profLangs.value = (data.languages || []).join(', ');
+        profAvail.value = (data.availability || []).join(', ');
+        profImage.value = data.imageUrl || '';
+      } else {
+        console.warn("No doctor profile found in 'doctors' collection for this user.");
+      }
+    } catch (error) {
+      alert('Error loading profile: ' + error.message);
+    }
+  }
+  
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentDoctor) return;
+    
+    profileSaveBtn.textContent = 'Saving...';
+    profileSaveBtn.disabled = true;
+    
+    const processArray = (str) => str.split(',').map(s => s.trim()).filter(Boolean);
+    
+    try {
+      const docRef = db.collection('doctors').doc(currentDoctor.uid);
+      
+      const profileData = {
+        name: profName.value,
+        specialization: profSpec.value,
+        Hospital: profHospital.value,
+        languages: processArray(profLangs.value),
+        availability: processArray(profAvail.value),
+        imageUrl: profImage.value,
+      };
+      
+      await docRef.set(profileData, { merge: true });
+      
+      await currentDoctor.updateProfile({ displayName: profName.value });
+      await db.collection('users').doc(currentDoctor.uid).set({ 
+        name: profName.value,
+        role: 'doctor'
+      }, { merge: true });
+      
+      doctorNameEl.textContent = profName.value;
+      
+      alert('Profile updated successfully!');
+      
+    } catch (error)
+    {
+      alert('Error saving profile: ' + error.message);
+    }
+    
+    profileSaveBtn.textContent = 'Save Changes';
+    profileSaveBtn.disabled = false;
+  });
+
+  // --- 6. DOCTOR AVAILABILITY TOGGLE (Unchanged) ---
+  function loadAvailability(doctorId) {
+      db.collection('doctors').doc(doctorId).onSnapshot(doc => {
+        if (doc.exists) {
+          const isAvailable = doc.data().isAvailable || false;
+          availabilityToggle.checked = isAvailable;
+          availabilityStatusText.textContent = isAvailable ? 'Available' : 'Unavailable';
+        } else {
+          availabilityStatusText.textContent = 'Unavailable';
+          availabilityToggle.checked = false;
+        }
+      }, error => {
+        console.error("Error listening to availability:", error);
+      });
+  }
+
+  availabilityToggle.addEventListener('change', async () => {
+      if (!currentDoctor) return;
+      const isAvailable = availabilityToggle.checked;
+      
+      availabilityStatusText.textContent = isAvailable ? 'Saving...' : 'Saving...';
+      
+      try {
+        await db.collection('doctors').doc(currentDoctor.uid).set({
+          isAvailable: isAvailable
+        }, { merge: true });
+        
+      } catch (error) {
+        alert('Error updating status: ' + error.message);
+        availabilityToggle.checked = !isAvailable;
+        availabilityStatusText.textContent = 'Error!';
+      }
+  });
+
+
+  // ------------------------------------------------------------------
+  // --- 7. CHAT FUNCTIONS (MODIFIED FOR FILE UPLOADS) ---
+  // ------------------------------------------------------------------
+
+  function openChat(bookingId, patientName) {
+    chatPopup.style.display = 'flex';
+    chatWithName.textContent = `Chat with ${patientName}`;
+    currentChatBookingId = bookingId;
+    
+    chatMessages.innerHTML = '';
+    
+    if (unsubscribeMessages) { unsubscribeMessages(); }
+    
+    const messagesRef = db.collection('bookings').doc(bookingId).collection('messages')
+                          .orderBy('timestamp', 'asc');
+
+    unsubscribeMessages = messagesRef.onSnapshot(querySnapshot => {
+        chatMessages.innerHTML = ''; 
+        querySnapshot.forEach(doc => {
+          renderMessage(doc.data());
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, error => {
+        console.error("Error loading messages:", error);
+        chatMessages.innerHTML = `<p class="text-red-500">Error loading messages.</p>`;
+      });
+  }
+
+  /**
+   * MODIFIED: Renders either a text message or a file/image attachment.
+   */
+  function renderMessage(message) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('chat-message');
+    
+    if (message.type === 'file') {
+      msgDiv.classList.add('attachment');
+      
+      let fileContent = '';
+      const fileName = message.fileName || 'file';
+      const fileUrl = message.fileUrl;
+      
+      if (fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        // It's an image
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <img src="${fileUrl}" alt="${fileName}" style="max-width: 200px; border-radius: 0.5rem; cursor: pointer;">
+                       </a>`;
+      } else if (fileName.match(/\.pdf$/i)) {
+        // It's a PDF
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <span class="material-symbols-outlined">picture_as_pdf</span>
+                         ${fileName}
+                       </a>`;
+      } else {
+        // Other file
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <span class="material-symbols-outlined">description</span>
+                         ${fileName}
+                       </a>`;
+      }
+      msgDiv.innerHTML = fileContent;
+      
+    } else {
+      // It's a text message
+      msgDiv.textContent = message.text;
+    }
+    
+    if (message.senderId === currentDoctor.uid) {
+      msgDiv.classList.add('sent');
+    } else {
+      msgDiv.classList.add('received');
+    }
+    
+    chatMessages.appendChild(msgDiv);
+  }
+
+  function closeChat() {
+    chatPopup.style.display = 'none';
+    currentChatBookingId = null;
+    if (unsubscribeMessages) {
+      unsubscribeMessages(); 
+      unsubscribeMessages = null;
+    }
+  }
+  chatCloseBtn.addEventListener('click', closeChat);
+
+  /**
+   * MODIFIED: Handles sending text messages ONLY.
+   */
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    
+    // Only send if there is text
+    if (text === '' || !currentChatBookingId || !currentDoctor) return;
+    
+    const messageData = {
+      text: text,
+      type: 'text', // Specify type
+      senderId: currentDoctor.uid,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+      const messagesColRef = db.collection('bookings').doc(currentChatBookingId).collection('messages');
+      await messagesColRef.add(messageData);
+      chatInput.value = '';
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Error sending message. Please try again.");
+    }
+  });
+
+  // --- NEW: FILE UPLOAD LISTENERS ---
+  
+  // Trigger hidden file input
+  chatAttachBtn.addEventListener('click', () => {
+    chatFileInput.click();
+  });
+  
+  // Handle file selection and upload
+  chatFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !currentChatBookingId || !currentDoctor) return;
+    
+    // 1. Create a temporary "uploading" message
+    const tempMsgDiv = document.createElement('div');
+    tempMsgDiv.classList.add('chat-message', 'sent');
+    tempMsgDiv.textContent = `Uploading ${file.name}...`;
+    chatMessages.appendChild(tempMsgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    try {
+      // 2. Create storage path using the rules
+      const timestamp = new Date().getTime();
+      const filePath = `chat_uploads/${currentChatBookingId}/${timestamp}-${file.name}`;
+      const storageRef = storage.ref(filePath);
+      
+      // 3. Upload file
+      const uploadTask = storageRef.put(file);
+      await uploadTask;
+      
+      // 4. Get download URL
+      const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+      
+      // 5. Save 'file' message to Firestore
+      const messageData = {
+        type: 'file',
+        fileName: file.name,
+        fileUrl: downloadURL,
+        senderId: currentDoctor.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      const messagesColRef = db.collection('bookings').doc(currentChatBookingId).collection('messages');
+      await messagesColRef.add(messageData);
+      
+      // 6. Remove temporary message
+      tempMsgDiv.remove();
+      // The real-time listener will add the final message
+      
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      tempMsgDiv.textContent = `Error uploading ${file.name}.`;
+      tempMsgDiv.style.color = 'red';
+    }
+    
+    // Reset file input so user can upload the same file again
+    e.target.value = '';
+  });
+
+</script>
+</body>
+</html>
