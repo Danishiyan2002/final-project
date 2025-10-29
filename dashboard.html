@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Patient Dashboard - MAMMOCARE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  /* --- STYLES FROM YOUR INDEX.HTML --- */
+  body{font-family:"Space Grotesk",sans-serif;background:linear-gradient(to bottom,#0D1B2A,#1B263B);color:#fff; min-height: 100vh;}
+  .glass-panel{background:rgba(255,255,255,.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);}
+  #particle-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:-1;}
+  .hidden-section{display:none}.active-section{display:block}
+  .hidden { display: none; } /* Added utility class */
+  
+  /* --- DASHBOARD-SPECIFIC STYLES --- */
+  #loading-overlay {
+    position: fixed; inset: 0; background: linear-gradient(to bottom, #0D1B2A, #1B263B);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+    flex-direction: column; gap: 1rem; font-size: 1.25rem; font-weight: 500;
+  }
+  .spinner {
+    width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #4A90E2; border-radius: 50%; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dashboard-content { display: none; }
+
+  /* --- Navigation Button Styles --- */
+  .header-nav-btn {
+    background: none; border: none; color: #fff; font-size: 0.875rem; font-weight: 500;
+    cursor: pointer; transition: color 0.2s ease;
+  }
+  .header-nav-btn:hover { color: #4A90E2; }
+  .header-nav-btn.active { color: #4A90E2; font-weight: 700; }
+  .footer-btn {
+    background: none; border: none; color: #9ca3af; font-size: 1rem;
+    cursor: pointer; transition: color 0.2s ease;
+  }
+  .footer-btn:hover { color: #fff; }
+  
+  /* --- Content-specific styles --- */
+  .report-item {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    padding: 1rem; border-radius: 0.75rem; margin-top: 0.75rem;
+  }
+  .report-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+  .report-actions .btn-sm {
+    background: rgba(255,255,255,.1); border: none; color: #fff; padding: 6px 12px;
+    border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+  }
+  .report-actions .btn-sm.btn-delete { background: #e11d48; }
+  .report-actions .btn-sm.btn-download-pdf { background: #4A90E2; }
+  .report-actions .btn-sm:disabled { opacity: 0.7; cursor: not-allowed; }
+  
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.875rem; font-weight: 500; color: #cbd5e1; margin-bottom: 0.5rem; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; background-color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem; color: #111; font-size: 1rem; padding: 0.75rem 1rem;
+  }
+  .form-input::placeholder, .form-textarea::placeholder { color: #9ca3af; }
+  .form-input:focus, .form-textarea:focus, .form-select:focus {
+    outline: none; border-color: #4A90E2; box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.3);
+  }
+  .form-select {
+    appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem;
+  }
+  .form-select option { background: #f8fafc; color: #111; }
+  
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; border-radius: 0.75rem;
+    height: 3rem; padding-left: 1.5rem; padding-right: 1.5rem; background-color: #4A90E2;
+    color: #fff; font-size: 1rem; font-weight: 700; border: none; cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .btn-primary:hover { background-color: #357ABD; }
+  
+  .content-section h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+  .content-section h3 { font-size: 1.25rem; font-weight: 600; color: #fff; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+  .content-section p, .content-section ul { color: #cbd5e1; line-height: 1.6; margin-bottom: 1rem; }
+  .content-section ul { list-style: disc; padding-left: 1.5rem; }
+  .content-section li { margin-bottom: 0.5rem; }
+  .content-section strong { color: #fff; font-weight: 600; }
+  
+  /* --- DOCTOR BOOKING PAGE STYLES --- */
+  .filter-group h3 { font-size: 1.125rem; font-weight: 600; color: #fff; margin-top: 1.25rem; margin-bottom: 0.75rem; }
+  .filter-group .checkbox-group { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .filter-group .checkbox-group input {
+    width: 1.15em; height: 1.15em; background-color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 0.25rem; color: #4A90E2;
+    transition: background-color 0.2s; cursor: pointer;
+  }
+  .filter-group .checkbox-group input:checked { background-color: #4A90E2; border-color: #357ABD; }
+  .filter-group .checkbox-group label { color: #cbd5e1; cursor: pointer; }
+
+  .doctor-card {
+    display: flex; flex-direction: column; padding: 1.25rem;
+    border-radius: 1rem; margin-bottom: 1rem;
+  }
+  @media (min-width: 768px) { .doctor-card { flex-direction: row; align-items: center; gap: 1.5rem; } }
+  .doctor-img {
+    width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+  }
+  .doctor-info { flex-grow: 1; margin-top: 1rem; }
+  @media (min-width: 768px) { .doctor-info { margin-top: 0; } }
+  .doctor-name {
+    font-size: 1.25rem; font-weight: 700; color: #fff;
+    display: flex; align-items: center; gap: 0.5rem; 
+  }
+  .doctor-spec { font-size: 1rem; color: #cbd5e1; margin-bottom: 0.75rem; }
+  .doctor-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .doctor-tag {
+    background: rgba(255, 255, 255, 0.1); padding: 0.25rem 0.75rem;
+    border-radius: 9999px; font-size: 0.875rem; font-weight: 500;
+  }
+  
+  .online-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background-color: #6b7280; /* Gray - default/unavailable */
+  }
+  .online-dot.available {
+    background-color: #22c55e; /* Green - available */
+  }
+  
+  .doctor-actions {
+    display: flex; flex-direction: column; gap: 0.5rem;
+    margin-top: 1rem; width: 100%;
+  }
+  @media (min-width: 768px) { .doctor-actions { margin-top: 0; width: auto; margin-left: auto; flex-shrink: 0; } }
+
+  .btn-book, .btn-chat, .btn-pending {
+    display: inline-flex; align-items: center; justify-content: center; border-radius: 0.75rem;
+    height: 3rem; padding-left: 1.5rem; padding-right: 1.5rem;
+    color: #fff; font-size: 1rem; font-weight: 700; border: none; cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .btn-book { background-color: #4A90E2; }
+  .btn-book:hover { background-color: #357ABD; }
+  .btn-book:disabled { background-color: #357ABD; cursor: not-allowed; opacity: 0.7; }
+  
+  .btn-chat { background-color: #16a34a; } /* Green */
+  .btn-chat:hover { background-color: #15803d; }
+  
+  .btn-pending { background-color: #6b7280; cursor: not-allowed; opacity: 0.8; }
+  
+  #short-summary {
+    font-size: 1.125rem; font-weight: 600; color: #4A90E2;
+    padding: 0.5rem 0; text-align: center;
+  }
+  
+  /* --- CHAT POPUP STYLES --- */
+  #chat-popup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    max-width: 90vw;
+    height: 450px;
+    max-height: 70vh;
+    z-index: 1000;
+    display: none; 
+    flex-direction: column;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+  #chat-header {
+    background-color: #4A90E2;
+    color: white;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  #chat-close-btn {
+    background: none; border: none; color: white;
+    font-size: 1.5rem; font-weight: bold; cursor: pointer; line-height: 1;
+  }
+  #chat-messages {
+    flex-grow: 1;
+    padding: 0.75rem;
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.9); 
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .chat-message {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    max-width: 80%;
+    word-wrap: break-word;
+    color: #111; 
+  }
+  .chat-message.sent {
+    background-color: #dbeafe; 
+    align-self: flex-end;
+    border-bottom-right-radius: 0.25rem;
+  }
+  .chat-message.received {
+    background-color: #e5e7eb; 
+    align-self: flex-start;
+    border-bottom-left-radius: 0.25rem;
+  }
+  
+  /* --- NEW: Styles for file attachments in chat --- */
+  .chat-message.attachment a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f3f4f6;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    color: #1f2937;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .chat-message.attachment a:hover {
+    background-color: #e5e7eb;
+  }
+  .chat-message.attachment img {
+    max-width: 100%;
+    border-radius: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  /* --- MODIFIED: Chat Form Styles --- */
+  #chat-form {
+    display: flex;
+    align-items: center; /* Vertically align items */
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.95);
+    flex-shrink: 0;
+  }
+  
+  /* --- NEW: Attach Button Style --- */
+  #chat-attach-btn {
+    background: none;
+    border: none;
+    color: #4A90E2;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  #chat-attach-btn:hover { background-color: #dbeafe; }
+  
+  #chat-input {
+    flex-grow: 1;
+    border: 1px solid #ccc;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    color: #111; 
+  }
+  #chat-input:focus { outline: none; border-color: #4A90E2; }
+  #chat-send-btn {
+    background: #4A90E2;
+    border: none;
+    color: white;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #chat-send-btn:hover { background-color: #357ABD; }
+  
+  /* --- PDF TEMPLATE STYLES --- */
+  #pdf-container {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 210mm;
+    height: 297mm;
+    background: #fff;
+    color: #000;
+    font-family: Arial, sans-serif;
+  }
+  .pdf-template {
+    padding: 20mm;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .pdf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #4A90E2;
+    padding-bottom: 10px;
+  }
+  .pdf-header h1 {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 24pt;
+    color: #0D1B2A;
+    margin: 0;
+  }
+  .pdf-header .logo {
+    width: 40px;
+    height: 40px;
+  }
+  .pdf-body {
+    margin-top: 10mm;
+    flex-grow: 1;
+  }
+  .pdf-body h2 {
+    font-size: 16pt;
+    color: #0D1B2A;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+    margin-top: 0;
+  }
+  .pdf-body img {
+    max-width: 100%;
+    border: 1px solid #eee;
+    margin-top: 5mm;
+  }
+  .pdf-body ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    font-size: 10pt;
+  }
+  .pdf-body p {
+    font-size: 10pt;
+    line-height: 1.6;
+  }
+  .pdf-footer {
+    margin-top: auto;
+    text-align: center;
+    font-size: 8pt;
+    color: #777;
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+  }
+</style>
+<script>
+  tailwind.config={darkMode:"class",theme:{extend:{colors:{primary:"#4A90E2","background-dark":"#0D1B2A"},fontFamily:{display:["Space Grotesk"]},borderRadius:{DEFAULT:"0.75rem",lg:"1rem",xl:"1.5rem",full:"9999px"}}}};
+</script>
+</head>
+<body class="bg-background-dark font-display">
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div>Loading Dashboard...</div>
+</div>
+
+<div id="dashboard-content" class="dashboard-content">
+  <canvas id="particle-canvas"></canvas>
+  <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+    <div class="px-4 md:px-10 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+      <div class="flex flex-col max-w-[1024px] flex-1">
+        
+        <header class="flex items-center justify-between whitespace-nowrap px-6 py-4 rounded-xl glass-panel sticky top-5 z-10">
+          <div class="flex items-center gap-4 text-white">
+            <div class="size-6 text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"><path fill="currentColor" d="M24 .757 47.243 24 24 47.243.757 24 24 .757ZM21 35.757V12.243L9.243 24 21 35.757Z"/></svg>
+            </div>
+            <h2 class="text-white text-xl font-bold tracking-[-0.015em]">MAMMOCARE</h2>
+          </div>
+          
+          <nav class="hidden md:flex flex-1 justify-end gap-8" aria-label="Main">
+            <button data-route="detect" class="header-nav-btn active">Home</button>
+            <button data-route="reports" class="header-nav-btn">My Reports</button>
+            <button data-route="book" class="header-nav-btn">Book a Doctor</button>
+            <button data-route="about" class="header-nav-btn">About</button>
+            <button data-route="contact" class="header-nav-btn">Contact</button>
+            <button id="signOutBtn" class="flex min-w-[84px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold"><span class="truncate">Sign Out</span></button>
+          </nav>
+          
+          <div class="md:hidden"><button id="mobileMenuBtn" class="text-white"><span class="material-symbols-outlined">menu</span></button></div>
+        </header>
+
+        <div id="mobileMenu" class="glass-panel rounded-xl mt-3 p-4 md:hidden hidden">
+          <div class="grid gap-2">
+            <button data-route="detect" class="header-nav-btn text-left active">Home</button>
+            <button data-route="reports" class="header-nav-btn text-left">My Reports</button>
+            <button data-route="book" class="header-nav-btn text-left">Book a Doctor</button>
+            <button data-route="about" class="header-nav-btn text-left">About</button>
+            <button data-route="contact" class="header-nav-btn text-left">Contact</button>
+            <button id="signOutBtnMobile" class="mt-2 flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Sign Out</button>
+          </div>
+        </div>
+
+        <main class="flex-1 mt-6">
+          <div class="glass-panel rounded-xl p-6">
+            <h1 class="text-3xl font-bold">Welcome, <span id="patient-name">Patient</span>!</h1>
+            <p class="text-gray-300 mt-1">This is your private patient dashboard.</p>
+          </div>
+          
+          <section id="detect" class="active-section mt-6">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">Upload & Detect</h2>
+              <p class="text-gray-300">Your results are private. Only you can see them or choose to save them.</p>
+              <div class="mt-4">
+                <input id="fileInput" type="file" accept="image/*"
+                       class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white hover:file:bg-primary/80" />
+                <canvas id="canvas" class="mt-4 w-full max-h-[60vh] rounded-xl bg-black/30"></canvas>
+                <div id="log" class="mt-2 text-white/80">Status: Waiting for upload…</div>
+                <div class="mt-4 flex flex-wrap gap-3">
+                  <button id="runBtn" class="rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold">Run Detection</button>
+                  <button id="clearBtn" class="rounded-lg h-10 px-4 bg-white/10 text-white text-sm font-bold">Clear</button>
+                  <button id="downloadBtn" class="rounded-lg h-10 px-4 bg-white/10 text-white text-sm font-bold">Download Annotated</button>
+                  <button id="saveBtn" class="rounded-lg h-10 px-4 bg-green-600 text-white text-sm font-bold hidden">Save Report</button>
+                </div>
+                <div class="mt-4 grid md:grid-cols-3 gap-4">
+                  <div class="glass-panel rounded-xl p-4 text-center">
+                    <div class="text-primary font-bold">Findings</div>
+                    <div id="sumCount" class="text-white text-xl font-extrabold">0</div>
+                  </div>
+                  <div class="glass-panel rounded-xl p-4 text-center">
+                    <div class="text-primary font-bold">Top class</div>
+                    <div id="sumTop" class="text-white text-xl font-extrabold">—</div>
+                  </div>
+                  <div class="glass-panel rounded-xl p-4 text-center">
+                    <div class="text-primary font-bold">Max confidence</div>
+                    <div id="sumConf" class="text-white text-xl font-extrabold">0%</div>
+                  </div>
+                  <div id="short-summary" class="md:col-span-3"></div>
+                </div>
+                <div id="classExplain" class="glass-panel rounded-xl p-4 mt-4 text-white">No findings detected.</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="reports" class="hidden-section mt-6">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">My Saved Reports</h2>
+              <p class="text-gray-300">This is your private case history. You can share or delete reports at any time.</p>
+              <div id="reports-list" class="mt-4">
+                <div class="text-center p-4">Loading reports...</div>
+              </div>
+            </div>
+          </section>
+          
+          <section id="book" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2 class="text-white text-2xl font-bold">Find Your Doctor</h2>
+              <p class="text-gray-300">Filter by language, hospital, or availability to find the right specialist for you.</p>
+              
+              <div class="mt-6 grid md:grid-cols-3 gap-6">
+                
+                <div class="md:col-span-1 filter-group">
+                  <div class="form-group">
+                    <label for="doctor-search" class="form-label">Search by doctor's name</label>
+                    <input type="search" id="doctor-search" class="form-input" placeholder="e.g., Dr. Amina Khan">
+                  </div>
+                  
+                  <h3>Language</h3>
+                  <div class="checkbox-group">
+                    <input type="checkbox" id="lang-sinhala" name="language" value="Sinhala">
+                    <label for="lang-sinhala">Sinhala</label>
+                  </div>
+                  <div class="checkbox-group">
+                    <input type="checkbox" id="lang-tamil" name="language" value="Tamil">
+                    <label for="lang-tamil">Tamil</label>
+                  </div>
+                  <div class="checkbox-group">
+                    <input type="checkbox" id="lang-english" name="language" value="English">
+                    <label for="lang-english">English</label>
+                  </div>
+
+                  <h3>Hospital</h3>
+                  <div class="form-group">
+                    <select id="doctor-hospital" class="form-select">
+                      <option value="all">Select a hospital</option>
+                      <option value="Asiri Hospital">Asiri Hospital</option>
+                      <option value="Lanka Hospitals">Lanka Hospitals</option>
+                      <option value="Nawaloka Hospital">Nawaloka Hospital</option>
+                      </select>
+                  </div>
+
+                  <h3>Availability</h3>
+                  <div class="form-group">
+                    <select id="doctor-availability" class="form-select">
+                      <option value="all">Select availability</option>
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                      <option value="Saturday">Saturday</option>
+                      <option value="Sunday">Sunday</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="md:col-span-2">
+                  <div id="doctor-list-container">
+                    <div id="doctor-loading" class="text-center p-6">
+                      <div class="spinner mx-auto"></div>
+                      <p class="mt-2">Loading doctors...</p>
+                    </div>
+                    </div>
+                </div>
+                
+              </div>
+            </div>
+          </section>
+          
+          <section id="about" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>About MAMMOCARE</h2>
+              <p>Welcome to MAMMOCARE, a patient-first platform designed to empower you with a clearer understanding of your breast health screenings. We believe that technology, when used thoughtfully, can bridge the gap between complex medical data and patient comprehension.</p>
+              
+              <h3>Our Mission</h3>
+              <p>Our mission is simple: to provide an accessible, private, and educational tool that complements your standard medical care. We use state-of-the-art Artificial Intelligence to analyze mammogram images, offering a "second look" that highlights and explains potential areas of interest. This is not a diagnosis, but a powerful educational resource to help you form more confident and informed questions for your doctor.</p>
+
+              <h3>How Our AI Works</h3>
+              <p>Our AI model has been trained on thousands of anonymized mammograms, learning to identify patterns associated with common findings like calcifications, masses, and asymmetries. When you
+upload your image, the AI assesses it and provides findings with confidence scores, helping to categorize what it sees based on this vast library of knowledge.</p>
+              
+              <h3>Your Privacy is Our Priority</h3>
+              <p>We built this platform on the core principle that **you, and only you, are in control of your data.**</p>
+              <ul>
+                <li><strong>No Auto-Saving:</strong> Guest uploads are processed and then immediately discarded. We never save them.</li>
+                <li><strong>Patient-Controlled Storage:</strong> As a logged-in patient, you have the *option* to save a report to your private, encrypted account, which is secured by Firebase.</li>
+                <li><strong>You Control Sharing:</strong> A doctor or administrator *cannot* see your reports unless you explicitly choose to share a specific report with them.</li>
+                <li><strong>You Can Delete:</strong> You can permanently delete any of your saved reports at any time.</li>
+              </ul>
+              
+              <h3 style="color: #ef4444;">Important Medical Disclaimer</h3>
+              <p><strong>MAMMOCARE is an educational and screening support tool. It is NOT a substitute for a professional medical diagnosis.</strong> The AI findings are for informational purposes only and should never be used to make medical decisions. Always consult with a qualified radiologist and your personal doctor for the interpretation of your mammogram and for any medical advice or diagnosis.</p>
+            </div>
+          </section>
+          
+          <section id="contact" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>Contact Us</h2>
+              <p>If you have questions about using the platform, need technical support, or want to provide feedback, please reach out. We are here to help.</p>
+              <div class="mt-4 grid md:grid-cols-2 gap-4">
+                <div class="glass-panel rounded-xl p-4">
+                  <div class="text-white font-bold">Technical Support</div>
+                  <div class="text-gray-300 text-sm">Email: support@mammo.care</div>
+                </div>
+                <div class="glass-panel rounded-xl p-4">
+                  <div class="text-white font-bold">General Inquiries</div>
+                  <div class="text-gray-300 text-sm">Email: info@mammo.care</div>
+                </div>
+              </div>
+            </div>
+          </section>
+          
+          <section id="privacy" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>Privacy Policy</h2>
+              <p>Your privacy is the foundation of this service. This policy outlines how we handle your data when you use MAMMOCARE.</p>
+              <h3>1. Data We Collect</h3>
+              <ul>
+                <li><strong>Account Information:</strong> When you sign up, we collect your email, password (which is hashed and unreadable by us), and full name.</li>
+                <li><strong>Uploaded Images:</strong> As a guest, images are deleted after processing. As a patient, images are only saved to your private database if you explicitly click "Save Report."</li>
+                <li><strong>Reports & Bookings:</strong> Your saved reports and booking requests are stored in your private, encrypted database partition.</li>
+              </ul>
+              <h3>2. How We Use Your Data</h3>
+              <ul>
+                <li>To provide, operate, and maintain our services.</li>
+                <li>To allow you to create and manage your secure account.</li>
+                <li>To facilitate booking requests between you and medical professionals.</li>
+                <li>We **NEVER** sell your personal data or medical images.</li>
+              </ul>
+              <h3>3. Data Control (Your Rights)</h3>
+              <ul>
+                <li><strong>Access:</strong> You can access your saved reports at any time through your dashboard.</li>
+                <li><strong>Deletion:</strong> You can permanently delete your saved reports at any time.</li>
+                <li><strong>Sharing:</strong> You are the only one who can initiate the sharing of a report with a doctor. We cannot see or share your data.</li>
+                <li><strong>Deletion:</strong> We can permanently delete your user account and all associated data upon request.</li>
+              </ul>
+              <p>Our backend is built on Google Firebase, which uses industry-leading security to protect your data from unauthorized access.</p>
+            </div>
+          </section>
+          
+          <section id="terms" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>Terms of Service</h2>
+              <p>By using MAMMOCARE, you agree to these terms.</p>
+              <h3>1. Use of Service</h3>
+              <p>MAMMOCARE is provided as an educational support tool. You agree not to use this service as a primary diagnostic tool or to replace the advice of a qualified medical professional.</p>
+              <h3>2. User Account</h3>
+              <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.</p>
+              <h3>3. Limitation of Liability</h3>
+              <p>The AI model, while advanced, is not infallible. It can make mistakes, miss findings, or flag benign areas. MAMMOCARE, its creators, and affiliates are not liable for any decisions, actions, or diagnoses made based on the information provided by this service. Your medical care is your responsibility and that of your healthcare provider.</p>
+              <h3>4. Service Termination</h3>
+              <p>We reserve the right to terminate or suspend accounts for users who violate these terms.</p>
+            </div>
+          </section>
+          
+          <section id="hipaa" class="hidden-section mt-6 content-section">
+            <div class="glass-panel rounded-xl p-6">
+              <h2>HIPAA Compliance</h2>
+              <p>We are committed to protecting your sensitive health information. MAMMOCARE is built using services that support HIPAA (Health Insurance Portability and Accountability Act) compliance.</p>
+              <h3>How We Comply:</h3>
+              <ul>
+                <li><strong>Secure Infrastructure:</strong> We use Google Firebase, which provides HIPAA-compliant services. Data is encrypted in transit and at rest.</li>
+                <li><strong>Access Control:</strong> Firebase security rules enforce strict access control. Only you, the authenticated user, can access your own data. No administrator or other user can view your private reports.</li>
+                <li><strong>Data Integrity:</strong> All data modifications are logged, and access is strictly monitored.</li>
+              </ul>
+              <p>Your trust is paramount. By building on a HIPAA-compliant foundation, we ensure your personal health information (PHI) is protected by robust technical, physical, and administrative safeguards.</p>
+            </div>
+          </section>
+
+        </main>
+
+        <footer class="flex flex-col gap-6 px-5 py-10 text-center @container mt-12 border-t border-white/10">
+          <div class="flex flex-wrap items-center justify-center gap-6 @[480px]:gap-12">
+            <button data-route="privacy" class="footer-btn">Privacy Policy</button>
+            <button data-route="terms" class="footer-btn">Terms of Service</button>
+            <button data-route="hipaa" class="footer-btn">HIPAA Compliance</button>
+          </div>
+          <p class="text-gray-500 text-sm">© 2025 MAMMOCARE. For patient use only.</p>
+        </footer>
+      </div>
+    </div>
+  </div>
+</div> 
+
+<div id="chat-popup" class="glass-panel">
+  <div id="chat-header">
+    <span id="chat-with-name">Chat</span>
+    <button id="chat-close-btn">&times;</button>
+  </div>
+  <div id="chat-messages">
+    </div>
+  <form id="chat-form">
+    <input type="file" id="chat-file-input" class="hidden" accept="image/*,application/pdf">
+    
+    <button type="button" id="chat-attach-btn">
+      <span class="material-symbols-outlined !text-xl !font-bold">attach_file</span>
+    </button>
+    
+    <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+    
+    <button type="submit" id="chat-send-btn">
+      <span class="material-symbols-outlined !text-xl !font-bold">send</span>
+    </button>
+  </form>
+</div>
+
+<div id="pdf-container"></div>
+
+<script>
+  // --- Particle code (Unchanged) ---
+  const canvasBg = document.getElementById('particle-canvas');
+  if (canvasBg) {
+    const ctx = canvasBg.getContext('2d');
+    function sizeCanvas(){ canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; }
+    sizeCanvas();
+    let particles = []; const particleCount = 50;
+    class Particle {
+      constructor(){ this.x=Math.random()*canvasBg.width; this.y=Math.random()*canvasBg.height; this.size=Math.random()*2+1; this.speedX=Math.random()*0.5-0.25; this.speedY=Math.random()*0.5-0.25; this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')'; }
+      update(){ if(this.x>canvasBg.width||this.x<0) this.speedX*=-1; if(this.y>canvasBg.height||this.y<0) this.speedY*=-1; this.x+=this.speedX; this.y+=this.speedY; }
+      draw(){ ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+    }
+    function init(){ particles=[]; for(let i=0;i<particleCount;i++){ particles.push(new Particle()); } }
+    function connect(){ let o=1; for(let a=0;a<particles.length;a++){ for(let b=a;b<particles.length;b++){ const dx=particles[a].x-particles[b].x; const dy=particles[a].y-particles[b].y; const d=Math.sqrt(dx*dx+dy*dy); if(d<120){ o=1-d/120; ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(particles[a].x,particles[a].y); ctx.lineTo(particles[b].x,particles[b].y); ctx.stroke(); } } } }
+    function animate(){ ctx.clearRect(0,0,canvasBg.width,canvasBg.height); for(const p of particles){ p.update(); p.draw(); } connect(); requestAnimationFrame(animate); }
+    window.addEventListener('resize', ()=>{ sizeCanvas(); init(); });
+    init(); animate();
+  }
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+
+
+<script>
+  // --- YOUR REAL FIREBASE KEYS ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPJIH_83r_6ImQ_Oa8JU3OVvMkw3I5Mmw",
+    authDomain: "mammocare-backend.firebaseapp.com",
+    projectId: "mammocare-backend",
+    storageBucket: "mammocare-backend.firebasestorage.app",
+    messagingSenderId: "187598388703",
+    appId: "1:187598388703:web:f6e442aa544953917e586a",
+    measurementId: "G-WRK53QYD0H"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage(); 
+  let currentUser = null;
+</script>
+
+<script>
+  // --- Page Elements ---
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const dashboardContent = document.getElementById('dashboard-content');
+  const patientNameEl = document.getElementById('patient-name');
+  const signOutBtn = document.getElementById('signOutBtn');
+  const signOutBtnMobile = document.getElementById('signOutBtnMobile');
+  
+  const routeButtons = document.querySelectorAll('[data-route]');
+  const sections = ['detect', 'reports', 'book', 'about', 'contact', 'privacy', 'terms', 'hipaa'];
+
+  // Detect section elements
+  const log = document.getElementById('log');
+  const saveBtn = document.getElementById('saveBtn');
+  const sumTop = document.getElementById('sumTop');
+  const sumConf = document.getElementById('sumConf');
+  const sumCount = document.getElementById('sumCount');
+  const fileInput = document.getElementById('fileInput');
+  const canvas = document.getElementById('canvas');
+  const runBtn = document.getElementById('runBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const classExplainEl = document.getElementById('classExplain');
+  const shortSummaryEl = document.getElementById('short-summary');
+  
+  const reportsListEl = document.getElementById('reports-list');
+  
+  // Doctor Booking Elements
+  const doctorListContainer = document.getElementById('doctor-list-container');
+  const doctorLoading = document.getElementById('doctor-loading');
+  const doctorSearch = document.getElementById('doctor-search');
+  const doctorHospital = document.getElementById('doctor-hospital');
+  const doctorAvailability = document.getElementById('doctor-availability');
+  const languageCheckboxes = document.querySelectorAll('input[name="language"]');
+  let allDoctors = []; 
+  
+  // --- CHAT POPUP ELEMENTS (MODIFIED) ---
+  const chatPopup = document.getElementById('chat-popup');
+  const chatWithName = document.getElementById('chat-with-name');
+  const chatCloseBtn = document.getElementById('chat-close-btn');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatAttachBtn = document.getElementById('chat-attach-btn'); // NEW
+  const chatFileInput = document.getElementById('chat-file-input'); // NEW
+  
+  let currentChatBookingId = null; 
+  let unsubscribeMessages = null; 
+  
+  // Detection globals
+  let imageFile = null;
+  let imgObj = null;
+  let lastDetections = [];
+  const CLASS_INFO = {
+    CALC: { short: "Status: Calcifications detected. Typically benign, but requires medical review.", full: "Finding: Calcifications. These are tiny calcium deposits..." },
+    CIRC: { short: "Status: Mass with clear borders detected. Often benign, but check with a medical professional.", full: "Finding: Circumscribed Mass. This is a round or oval-shaped mass..." },
+    SPIC: { short: "Status: Mass with irregular borders detected. Highly suspicious and requires urgent follow-up.", full: "Finding: Spiculated Mass. This is a mass with spiky, irregular..." },
+    MISC: { short: "Status: Ill-defined mass detected. Borders are unclear; requires careful medical evaluation.", full: "Finding: Misc. / Ill-defined Mass. This is a mass whose borders are not clear..." },
+    ARCH: { short: "Status: Architectural Distortion detected. Requires immediate medical investigation.", full: "Finding: Architectural Distortion. This is an area where the normal pattern..." },
+    ASYM: { short: "Status: Asymmetry detected. An area appears different from the other side and needs evaluation.", full: "Finding: Asymmetry. This indicates an area in one breast that looks different..." },
+    NORM: { short: "Status: Normal. No specific abnormalities detected by the model.", full: "Status: Normal. The AI model did not detect any of the specific abnormal findings..." }
+  };
+
+
+  // ------------------------------------------------------------------
+  // --- 1. AUTHENTICATION (Unchanged) ---
+  // ------------------------------------------------------------------
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const userDocRef = db.collection('users').doc(user.uid);
+      const userDoc = await userDocRef.get();
+      
+      let isPatient = false;
+      
+      if (userDoc.exists) {
+        if (userDoc.data().role === 'patient') {
+          isPatient = true;
+        }
+      } 
+
+      if (isPatient) {
+        currentUser = user;
+        patientNameEl.textContent = user.displayName || 'Patient';
+        
+        loadReports(user.uid);
+        loadDoctors().catch(err => {
+          console.error("Error loading doctors:", err);
+          doctorLoading.innerHTML = `<p class="text-red-400">Error loading doctors. Please refresh.</p>`;
+        });
+        
+        listenForBookingStatus(user.uid);
+        
+        dashboardContent.style.display = 'block';
+        loadingOverlay.style.display = 'none';
+        
+      } else {
+        await auth.signOut();
+        alert('Access Denied. This portal is for patients only.');
+        window.location.href = 'login.html';
+      }
+    } else {
+      window.location.href = 'login.html';
+    }
+  });
+
+  // --- Sign Out & Nav (Unchanged) ---
+  function handleSignOut() {
+    auth.signOut().then(() => {
+      window.location.href = 'index.html';
+    });
+  }
+  signOutBtn.addEventListener('click', handleSignOut);
+  signOutBtnMobile.addEventListener('click', handleSignOut);
+  
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (mobileBtn && mobileMenu) mobileBtn.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
+
+  function show(route){
+    sections.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.classList.toggle('active-section', id===route);
+      el.classList.toggle('hidden-section', id!==route);
+    });
+    routeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-route') === route);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  routeButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=> show(btn.getAttribute('data-route')));
+  });
+
+  // ------------------------------------------------------------------
+  // --- 3. DETECTION LOGIC & SAVE REPORT (Unchanged) ---
+  // ------------------------------------------------------------------
+  
+  function summarize(preds){
+    lastDetections = preds;
+    sumCount.textContent = String(preds.length);
+    
+    let topClass = "NORM";
+    let maxP = { confidence: 0 };
+    if (preds.length) {
+        maxP = preds[0];
+        for (const p of preds){ if ((p.confidence||0) > (maxP.confidence||0)) maxP = p; }
+        topClass = (maxP.class || "unknown").toUpperCase().replace(/^\d\s*/, '');
+    }
+    
+    const info = CLASS_INFO[topClass] || CLASS_INFO.NORM;
+
+    sumTop.textContent = topClass;
+    sumConf.textContent = (((maxP.confidence || 0) * 100).toFixed(1)) + "%";
+    shortSummaryEl.textContent = info.short;
+    classExplainEl.textContent = info.full;
+    
+    saveBtn.classList.remove('hidden');
+  }
+
+  function renderDetections(preds){
+    if (!imgObj || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+    const scaleX = canvas.width / (imgObj.naturalWidth || canvas.width);
+    const scaleY = canvas.height / (imgObj.naturalHeight || canvas.height);
+    ctx.strokeStyle = '#e11d48';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#e11d48';
+    ctx.font = '14px Space Grotesk';
+    preds.forEach(p=>{
+      const bb = p.bbox || p.box || [];
+      const x1 = (bb[0]||0)*scaleX, y1 = (bb[1]||0)*scaleY, x2 = (bb[2]||0)*scaleX, y2=(bb[3]||0)*scaleY;
+      ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+      ctx.fillText((p.class||'unknown') + ' (' + (((p.confidence||0)*100).toFixed(1)) + '%)', x1+6, y1+18);
+    });
+  }
+
+  function loadImageFile(f){
+    if (!f || !f.type || !f.type.startsWith('image/')){ if (log) log.textContent='Error: Please select a JPG/PNG image.'; return; }
+    imageFile = f;
+    imgObj = new Image();
+    imgObj.onload = ()=>{
+      const nw = imgObj.naturalWidth||imgObj.width||0;
+      const nh = imgObj.naturalHeight||imgObj.height||0;
+      const maxW = 1400, ratio = Math.min(1, maxW / (nw||maxW));
+      canvas.width = Math.round((nw||maxW)*ratio);
+      canvas.height = Math.round((nh||maxW)*ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+      if (log) log.textContent = 'Status: Image loaded. Ready to detect.';
+      summarize([]);
+      saveBtn.classList.add('hidden');
+    };
+    imgObj.onerror = ()=>{ if (log) log.textContent = 'Error: Could not load this image.'; };
+    imgObj.src = URL.createObjectURL(f);
+  }
+
+  async function callBackend(file, conf){
+    const formData = new FormData(); formData.append('file', file);
+    const API_URL = 'http://localhost:8000/predict'; 
+    const url = API_URL + '?conf=' + encodeURIComponent(conf);
+    
+    try {
+      const res = await fetch(url, { method:'POST', body:formData });
+      if(!res.ok){ const text = await res.text(); throw new Error('HTTP ' + res.status + ' ' + res.statusText + ': ' + text); }
+      return res.json();
+    } catch (fetchError) {
+        console.error("Fetch error details:", fetchError);
+        log.textContent = `Error connecting to backend: ${fetchError.message}. Is it running?`;
+        throw new Error(`Fetch failed: ${fetchError.message}`);
+    }
+  }
+
+  function saveCanvasAsBlob() {
+    return new Promise((resolve, reject) => {
+      if (!canvas) {
+        return reject(new Error("Canvas element is missing."));
+      }
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to create blob from canvas."));
+        }
+      }, 'image/jpeg', 0.8);
+    });
+  }
+
+
+  fileInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if (f) loadImageFile(f);
+  });
+  
+  runBtn.addEventListener('click', async ()=>{
+    if (!imageFile){ if (log) log.textContent='Please select an image first.'; return; }
+    if (log) log.textContent='Detecting…';
+    try{
+      const data = await callBackend(imageFile, 0.15);
+      const preds = data.predictions || [];
+      summarize(preds);
+      renderDetections(preds);
+      if (log) log.textContent='Done. You can now save this report.';
+    }catch(err){
+      if (log && !log.textContent.startsWith('Error')) {
+        log.textContent='Error: ' + err.message;
+      }
+    }
+  });
+  
+  clearBtn.addEventListener('click', ()=>{
+    if (!imgObj || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(imgObj,0,0,canvas.width,canvas.height);
+    summarize([]);
+    saveBtn.classList.add('hidden');
+    if (log) log.textContent='Status: Cleared annotations.';
+  });
+  
+  downloadBtn.addEventListener('click', ()=>{
+    if (!canvas || !canvas.width || !canvas.height){ if (log) log.textContent='Upload an image first.'; return; }
+    const link = document.createElement('a');
+    link.download = 'mammogram-annotated.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+  
+  saveBtn.addEventListener('click', async () => {
+    if (!currentUser || lastDetections.length === 0) {
+      alert("Please run the detection first to create findings to save.");
+      return;
+    }
+    
+    saveBtn.disabled = true;
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    log.textContent = 'Status: Saving report... please wait.';
+
+    try {
+      const imageBlob = await saveCanvasAsBlob();
+      
+      const timestamp = new Date().toISOString().replace(/[^0-9]/g, '');
+      const filePath = `reports/${currentUser.uid}/${timestamp}_${imageFile.name}.jpg`;
+      const storageRef = storage.ref(filePath);
+      
+      const uploadTask = storageRef.put(imageBlob);
+      await uploadTask; 
+      
+      const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+      
+      const topFinding = lastDetections[0] || {};
+      const reportData = {
+        uid: currentUser.uid,
+        patientName: currentUser.displayName,
+        fileName: imageFile.name,
+        storagePath: filePath, 
+        imageUrl: downloadURL, 
+        topClass: (topFinding.class || 'NORM').toUpperCase(),
+        confidence: ((topFinding.confidence || 0) * 100).toFixed(1) + '%',
+        detections: lastDetections,
+        sharedWith: [], 
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      await db.collection('reports').add(reportData);
+      
+      log.textContent = 'Success! Report saved and added to "My Reports."';
+      saveBtn.classList.add('hidden');
+      
+      loadReports(currentUser.uid); 
+
+    } catch (error) {
+      console.error("Error saving report:", error);
+      log.textContent = `Error saving report: ${error.message}. Check storage and firestore rules.`;
+      alert(`Error saving report: ${error.message}`);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalText;
+    }
+  });
+
+
+  // ------------------------------------------------------------------
+  // --- 4. REPORTS & PDF DOWNLOAD LOGIC (Unchanged) ---
+  // ------------------------------------------------------------------
+  
+  async function loadReports(uid) {
+    reportsListEl.innerHTML = '<div class="text-center p-4">Loading reports...</div>';
+    
+    try {
+      const querySnapshot = await db.collection('reports')
+        .where('uid', '==', uid)
+        .get();
+        
+      if (querySnapshot.empty) {
+        reportsListEl.innerHTML = '<div class="text-center p-4 text-gray-400">You have no saved reports.</div>';
+        return;
+      }
+      
+      let reports = [];
+      querySnapshot.forEach(doc => {
+        reports.push({ id: doc.id, ...doc.data() });
+      });
+
+      reports.sort((a, b) => {
+        const timeA = a.createdAt?.toDate() || 0;
+        const timeB = b.createdAt?.toDate() || 0;
+        return timeB - timeA;
+      });
+
+      let html = '';
+      reports.forEach(report => {
+        const reportId = report.id;
+        const date = report.createdAt?.toDate().toLocaleString() || 'Unknown date';
+        
+        html += `
+          <div class="glass-panel report-item">
+            <div>
+              <div class="text-white font-bold">${report.fileName}</div>
+              <div class="text-sm text-gray-300">
+                Saved: ${date}
+              </div>
+              <div class="text-sm text-primary font-bold">
+                Top Finding: ${report.topClass} (${report.confidence})
+              </div>
+            </div>
+            <div class="report-actions">
+              <button class="btn-sm btn-download-pdf" style="background-color: #4A90E2;" data-report-id="${reportId}">Download PDF</button>
+              <button class="btn-sm btn-delete" data-delete-id="${reportId}">Delete</button>
+            </div>
+          </div>
+        `;
+      });
+      reportsListEl.innerHTML = html;
+      
+    } catch (error) {
+      console.error("Error loading reports:", error);
+      reportsListEl.innerHTML = `<div class="text-center p-4 text-red-400">Error loading reports.</div>`;
+    }
+  }
+
+  reportsListEl.addEventListener('click', async (e) => {
+    // Handle DELETE
+    if (e.target.matches('.btn-delete[data-delete-id]')) {
+      const docId = e.target.dataset.deleteId;
+      if (confirm('Are you sure you want to permanently delete this report?')) {
+        try {
+          const reportDoc = await db.collection('reports').doc(docId).get();
+          if (reportDoc.exists && reportDoc.data().storagePath) {
+            await storage.ref(reportDoc.data().storagePath).delete();
+          }
+          
+          await db.collection('reports').doc(docId).delete();
+          alert('Report deleted.');
+          loadReports(currentUser.uid); 
+        } catch (error) {
+          alert('Error deleting report: ' + error.message);
+        }
+      }
+    }
+    
+    // Handle PDF DOWNLOAD
+    if (e.target.matches('.btn-download-pdf[data-report-id]')) {
+      const reportId = e.target.dataset.reportId;
+      const button = e.target;
+      const originalText = button.textContent;
+
+      button.textContent = 'Generating...';
+      button.disabled = true;
+
+      const pdfContainer = document.getElementById('pdf-container');
+      const { jsPDF } = window.jspdf; 
+
+      try {
+        const reportDoc = await db.collection('reports').doc(reportId).get();
+        if (!reportDoc.exists) throw new Error('Report not found.');
+        const report = reportDoc.data();
+
+        let imageUrl = report.imageUrl;
+        if (!imageUrl) {
+            if (report.storagePath) {
+                imageUrl = await storage.ref(report.storagePath).getDownloadURL();
+            } else {
+                throw new Error("Image URL not found in report.");
+            }
+        }
+        
+        let detectionsHtml = (report.detections || []).map(p => 
+          `<li>
+             <strong>Finding:</strong> ${p.class || 'Unknown'} | 
+             <strong>Confidence:</strong> ${(p.confidence * 100).toFixed(1)}%
+           </li>`
+        ).join('');
+        if (detectionsHtml === '') detectionsHtml = '<li>No specific findings detected.</li>';
+        
+        const patientName = report.patientName || 'Patient';
+        const reportDate = (report.createdAt?.toDate() || new Date()).toLocaleDateString();
+
+        const templateHtml = `
+          <div class="pdf-template" id="current-pdf-report">
+            <div class="pdf-header">
+              <h1>MAMMOCARE</h1>
+              <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+                <path fill="#4A90E2" d="M24 .757 47.243 24 24 47.243.757 24 24 .757ZM21 35.757V12.243L9.243 24 21 35.757Z"></path>
+              </svg>
+            </div>
+            
+            <div class="pdf-body">
+              <h2>Patient Report</h2>
+              <p>
+                <strong>Patient:</strong> ${patientName}<br>
+                <strong>Report ID:</strong> ${reportId}<br>
+                <strong>Date Generated:</strong> ${reportDate}
+              </p>
+
+              <h2 style="margin-top: 10mm;">Annotated Image</h2>
+              <p>The following image shows the annotated findings from the AI analysis.</p>
+              <img src="${imageUrl}" crossOrigin="anonymous" alt="Annotated Mammogram">
+              
+              <h2 style="margin-top: 10mm;">Analysis Results</h2>
+              <p>
+                <strong>Top Finding:</strong> ${report.topClass} (${report.confidence})<br>
+                <strong>Original File:</strong> ${report.fileName}
+              </p>
+              <h3>Detection Details:</h3>
+              <ul>
+                ${detectionsHtml}
+              </ul>
+              
+              <p style="margin-top: 10mm; font-weight: bold; color: #e11d48;">
+                <strong>Disclaimer:</strong> This is an AI-generated educational report, NOT a medical diagnosis. 
+                Always consult a qualified healthcare professional.
+              </p>
+            </div>
+            
+            <div class="pdf-footer">
+              © ${new Date().getFullYear()} MAMMOCARE | Confidential Patient Information
+            </div>
+          </div>
+        `;
+        
+        pdfContainer.innerHTML = templateHtml;
+        const reportElement = document.getElementById('current-pdf-report');
+        
+        await new Promise((resolve, reject) => {
+            const img = reportElement.querySelector('img');
+            if (!img) {
+                return reject(new Error("Image element not found in template."));
+            }
+            if (img.complete) {
+                return resolve();
+            }
+            img.onload = resolve;
+            img.onerror = () => {
+                reject(new Error('Failed to load annotated image. Please check your Firebase Storage CORS settings.'));
+            };
+        });
+        
+        const canvas = await html2canvas(reportElement, {
+            useCORS: true, 
+            scale: 2 
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`MAMMOCARE-Report-${reportId.substring(0, 8)}.pdf`);
+
+      } catch (error) {
+        console.error("Error generating PDF:", error);
+        alert("Could not generate PDF: " + (error.message || "An unknown error occurred. Check the console."));
+      } finally {
+        pdfContainer.innerHTML = '';
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // --- 5. DOCTOR BOOKING & FILTERING LOGIC (Unchanged) ---
+  // ------------------------------------------------------------------
+  
+  async function loadDoctors() {
+    doctorLoading.style.display = 'block';
+    try {
+      db.collection('doctors').onSnapshot(querySnapshot => {
+          allDoctors = [];
+          const doctorPromises = querySnapshot.docs.map(async (doc) => {
+            const docData = { id: doc.id, ...doc.data() };
+            let publicUrl = 'https://via.placeholder.com/80?text=Dr';
+
+            try {
+              const imageUrl = docData.imageUrl;
+              if (imageUrl && !imageUrl.startsWith('http')) {
+                publicUrl = await storage.ref(imageUrl).getDownloadURL();
+              } else if (imageUrl) {
+                publicUrl = imageUrl;
+              }
+            } catch (e) {
+              console.warn(`Failed to get image for doc ${doc.id}: ${e.message}`);
+            }
+            
+            return { ...docData, displayImageUrl: publicUrl };
+          });
+          
+          Promise.all(doctorPromises).then(fetchedDoctors => {
+            allDoctors = fetchedDoctors;
+            applyDoctorFilters(); 
+            doctorLoading.style.display = 'none';
+          });
+      }, error => {
+          console.error("Error loading doctors collection:", error);
+          doctorLoading.innerHTML = `<p class="text-red-400">Error loading doctors. Please refresh.</p>`;
+      });
+      
+      if(currentUser) {
+        listenForBookingStatus(currentUser.uid);
+      }
+      
+    } catch (error) {
+      console.error("Initial load error:", error);
+      doctorLoading.innerHTML = `<p class="text-red-400">Error loading doctors.</p>`;
+    }
+  }
+  
+  function renderDoctors(doctors) {
+    if (doctors.length === 0) {
+      doctorListContainer.innerHTML = '<p class="text-gray-400">No doctors found matching your criteria.</p>';
+      return;
+    }
+    
+    let html = '';
+    doctors.forEach(doc => {
+      const languageTags = (doc.languages || []).map(lang => `<span class="doctor-tag">${lang}</span>`).join('');
+      
+      const availClass = doc.isAvailable ? 'available' : '';
+      
+      html += `
+        <div class="doctor-card glass-panel" data-doctor-card-id="${doc.id}">
+          <img src="${doc.displayImageUrl}" alt="${doc.name}" class="doctor-img">
+          <div class="doctor-info">
+            <h4 class="doctor-name">
+              ${doc.name}
+              <span class="online-dot ${availClass}" title="${availClass ? 'Available for booking' : 'Currently unavailable'}"></span>
+            </h4>
+            <p class="doctor-spec">${doc.specialization}</p>
+            <div class="doctor-tags">
+              ${languageTags}
+            </div>
+          </div>
+          <div class="doctor-actions">
+            <button class="btn-book" data-doc-id="${doc.id}" data-doc-name="${doc.name}">Book Appointment</button>
+            <button class="btn-chat hidden" data-doc-id="${doc.id}" data-doc-name="${doc.name}">
+              Chat
+            </button>
+            <button class="btn-pending hidden" disabled>Request Sent (Pending)</button>
+          </div>
+        </div>
+      `;
+    });
+    doctorListContainer.innerHTML = html;
+  }
+  
+  doctorListContainer.addEventListener('click', async (e) => {
+    if (e.target.matches('.btn-book')) {
+      if (!currentUser) { alert('You must be logged in to book.'); return; }
+      
+      const button = e.target;
+      const doctorId = button.dataset.docId;
+      const doctorName = button.dataset.docName;
+      
+      if (!confirm(`Request appointment with ${doctorName}?`)) return;
+      
+      button.textContent = 'Sending...';
+      button.disabled = true;
+      
+      const bookingData = {
+        uid: currentUser.uid,
+        patientName: currentUser.displayName,
+        patientEmail: currentUser.email,
+        doctorId: doctorId,
+        doctorName: doctorName,
+        status: 'pending', 
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      try {
+        await db.collection('bookings').add(bookingData);
+        alert('Booking request sent! The doctor will be notified.');
+      } catch (error) {
+        alert('Error sending request: ' + error.message);
+        button.textContent = 'Book Appointment';
+        button.disabled = false;
+      }
+    }
+    
+    if (e.target.matches('.btn-chat')) {
+      const doctorName = e.target.dataset.docName;
+      const bookingId = e.target.dataset.bookingId; 
+      if (bookingId) {
+        openChat(bookingId, doctorName);
+      } else {
+        alert("Error: Cannot find booking. Please refresh.");
+      }
+    }
+  });
+
+  function applyDoctorFilters() {
+    const searchText = doctorSearch.value.toLowerCase().trim();
+    const selectedHospital = doctorHospital.value.toLowerCase().trim();
+    const selectedAvailability = doctorAvailability.value.toLowerCase().trim();
+    
+    const checkedLanguages = [];
+    languageCheckboxes.forEach(cb => {
+      if (cb.checked) { checkedLanguages.push(cb.value.toLowerCase().trim()); }
+    });
+    
+    let filteredDoctors = allDoctors.filter(doc => {
+      const docName = (doc.name || '').toLowerCase().trim();
+      if (searchText && !docName.includes(searchText)) { return false; }
+      
+      const docHospital = (doc.Hospital || '').toLowerCase().trim();
+      if (selectedHospital !== 'all' && docHospital !== selectedHospital) { return false; }
+
+      if (selectedAvailability !== 'all') {
+        const docAvail = (doc.availability || []).map(day => day.toLowerCase().trim());
+        if (!docAvail.includes(selectedAvailability)) { return false; }
+      }
+      
+      if (checkedLanguages.length > 0) {
+        const docLangs = (doc.languages || []).map(l => l.toLowerCase().trim());
+        if (!checkedLanguages.every(lang => docLangs.includes(lang))) { return false; }
+      }
+      
+      return true;
+    });
+    
+    renderDoctors(filteredDoctors);
+    
+    if(currentUser) {
+       listenForBookingStatus(currentUser.uid);
+    }
+  }
+  
+  doctorSearch.addEventListener('input', applyDoctorFilters);
+  doctorHospital.addEventListener('change', applyDoctorFilters);
+  doctorAvailability.addEventListener('change', applyDoctorFilters);
+  languageCheckboxes.forEach(cb => cb.addEventListener('change', applyDoctorFilters));
+
+  // ------------------------------------------------------------------
+  // --- 6. BOOKING STATUS & CHAT CONTROL (MODIFIED FOR FILE UPLOADS) ---
+  // ------------------------------------------------------------------
+  
+  function listenForBookingStatus(uid) {
+    db.collection('bookings')
+      .where('uid', '==', uid)
+      .onSnapshot(querySnapshot => {
+        
+        let activeBookings = {}; 
+        
+        querySnapshot.forEach(doc => {
+          const booking = doc.data();
+          if (booking.status === 'accepted' || booking.status === 'pending') {
+             activeBookings[booking.doctorId] = {
+                status: booking.status,
+                bookingId: doc.id
+             };
+          }
+        });
+        
+        const allDoctorCards = document.querySelectorAll('.doctor-card[data-doctor-card-id]');
+        allDoctorCards.forEach(card => {
+          const docId = card.dataset.doctorCardId;
+          const booking = activeBookings[docId];
+          
+          const bookBtn = card.querySelector('.btn-book');
+          const chatBtn = card.querySelector('.btn-chat');
+          const pendingBtn = card.querySelector('.btn-pending');
+
+          bookBtn.classList.add('hidden');
+          chatBtn.classList.add('hidden');
+          pendingBtn.classList.add('hidden');
+
+          if (booking) {
+            if (booking.status === 'accepted') {
+              chatBtn.classList.remove('hidden');
+              chatBtn.dataset.bookingId = booking.bookingId; 
+            } else if (booking.status === 'pending') {
+              pendingBtn.classList.remove('hidden');
+            }
+          } else {
+            bookBtn.classList.remove('hidden');
+          }
+        });
+        
+      }, error => {
+        console.error("Error listening to booking status:", error);
+      });
+  }
+
+  function openChat(bookingId, doctorName) {
+    chatPopup.style.display = 'flex';
+    chatWithName.textContent = `Chat with ${doctorName}`;
+    currentChatBookingId = bookingId;
+    
+    chatMessages.innerHTML = ''; 
+    
+    if (unsubscribeMessages) { unsubscribeMessages(); }
+    
+    const messagesRef = db.collection('bookings').doc(bookingId).collection('messages')
+                          .orderBy('timestamp', 'asc');
+                          
+    unsubscribeMessages = messagesRef.onSnapshot(querySnapshot => {
+        chatMessages.innerHTML = ''; 
+        querySnapshot.forEach(doc => {
+          renderMessage(doc.data());
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }, error => {
+        console.error("Error loading messages:", error);
+        chatMessages.innerHTML = `<p class="text-red-500">Error loading messages.</p>`;
+      });
+  }
+
+  /**
+   * MODIFIED: Renders either a text message or a file/image attachment.
+   */
+  function renderMessage(message) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('chat-message');
+    
+    if (message.type === 'file') {
+      msgDiv.classList.add('attachment');
+      
+      let fileContent = '';
+      const fileName = message.fileName || 'file';
+      const fileUrl = message.fileUrl;
+      
+      if (fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        // It's an image
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <img src="${fileUrl}" alt="${fileName}" style="max-width: 200px; border-radius: 0.5rem; cursor: pointer;">
+                       </a>`;
+      } else if (fileName.match(/\.pdf$/i)) {
+        // It's a PDF
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <span class="material-symbols-outlined">picture_as_pdf</span>
+                         ${fileName}
+                       </a>`;
+      } else {
+        // Other file
+        fileContent = `<a href="${fileUrl}" target="_blank" rel="noopener noreferrer">
+                         <span class="material-symbols-outlined">description</span>
+                         ${fileName}
+                       </a>`;
+      }
+      msgDiv.innerHTML = fileContent;
+      
+    } else {
+      // It's a text message
+      msgDiv.textContent = message.text;
+    }
+    
+    // Check sender: currentUser.uid is the patient
+    if (message.senderId === currentUser.uid) {
+      msgDiv.classList.add('sent');
+    } else {
+      msgDiv.classList.add('received');
+    }
+    
+    chatMessages.appendChild(msgDiv);
+  }
+
+  function closeChat() {
+    chatPopup.style.display = 'none';
+    currentChatBookingId = null;
+    if (unsubscribeMessages) {
+      unsubscribeMessages(); 
+      unsubscribeMessages = null;
+    }
+  }
+  chatCloseBtn.addEventListener('click', closeChat);
+
+  /**
+   * MODIFIED: Handles sending text messages ONLY.
+   */
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    
+    // Only send if there is text
+    if (text === '' || !currentChatBookingId || !currentUser) return;
+    
+    const messageData = {
+      text: text,
+      type: 'text', // Specify type
+      senderId: currentUser.uid,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    try {
+      const messagesColRef = db.collection('bookings').doc(currentChatBookingId).collection('messages');
+      await messagesColRef.add(messageData);
+      chatInput.value = ''; 
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Error sending message. Please try again.");
+    }
+  });
+  
+  // --- NEW: FILE UPLOAD LISTENERS ---
+  
+  // Trigger hidden file input
+  chatAttachBtn.addEventListener('click', () => {
+    chatFileInput.click();
+  });
+  
+  // Handle file selection and upload
+  chatFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !currentChatBookingId || !currentUser) return;
+    
+    // 1. Create a temporary "uploading" message
+    const tempMsgDiv = document.createElement('div');
+    tempMsgDiv.classList.add('chat-message', 'sent');
+    tempMsgDiv.textContent = `Uploading ${file.name}...`;
+    chatMessages.appendChild(tempMsgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    try {
+      // 2. Create storage path using the rules
+      const timestamp = new Date().getTime();
+      const filePath = `chat_uploads/${currentChatBookingId}/${timestamp}-${file.name}`;
+      const storageRef = storage.ref(filePath);
+      
+      // 3. Upload file
+      const uploadTask = storageRef.put(file);
+      await uploadTask;
+      
+      // 4. Get download URL
+      const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+      
+      // 5. Save 'file' message to Firestore
+      const messageData = {
+        type: 'file',
+        fileName: file.name,
+        fileUrl: downloadURL,
+        senderId: currentUser.uid, // Correct: patient's UID
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      const messagesColRef = db.collection('bookings').doc(currentChatBookingId).collection('messages');
+      await messagesColRef.add(messageData);
+      
+      // 6. Remove temporary message
+      tempMsgDiv.remove();
+      // The real-time listener will add the final message
+      
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      tempMsgDiv.textContent = `Error uploading ${file.name}.`;
+      tempMsgDiv.style.color = 'red';
+    }
+    
+    // Reset file input so user can upload the same file again
+    e.target.value = '';
+  });
+
+</script>
+</body>
+</html>

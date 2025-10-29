@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Login / Sign Up - MAMMOCARE</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+  /* --- Base styles from your website --- */
+  body {
+    font-family: "Space Grotesk", sans-serif;
+    background: linear-gradient(to bottom, #0D1B2A, #1B263B);
+    color: #fff;
+    overflow-x: hidden;
+  }
+  .glass-panel {
+    background: rgba(255, 255, 255, .1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, .15);
+  }
+  #particle-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+  
+  /* --- Login/Sign Up card styles --- */
+  .auth-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  .auth-flipper-container {
+    perspective: 1000px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .auth-flipper {
+    position: relative;
+    width: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+  .auth-form-front,
+  .auth-form-back {
+    width: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: rgba(255, 255, 255, .08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 1.5rem;
+    padding: 2.5rem;
+    grid-area: 1 / 1;
+  }
+  .auth-flipper {
+      display: grid;
+      grid-template-areas: "1/1";
+  }
+  .auth-form-back {
+    transform: rotateY(180deg);
+  }
+  .auth-flipper-container.is-flipped .auth-flipper {
+    transform: rotateY(180deg);
+  }
+  .form-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 2rem;
+  }
+  .form-title .icon {
+    color: #4A90E2;
+    font-size: 2.25rem;
+  }
+  .input-group {
+    margin-bottom: 1.25rem;
+  }
+  .input-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* --- FIX for typing visibility (Black text on light background) --- */
+  .input-field {
+    width: 100%;
+    height: 3rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    color: #111;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.3);
+  }
+  .input-field::placeholder {
+    color: #9ca3af;
+  }
+  /* --- End of fix --- */
+
+  .btn-primary {
+    display: flex;
+    width: 100%;
+    min-width: 84px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    height: 3rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    background-color: #4A90E2;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .btn-primary:hover {
+    background-color: #357ABD;
+  }
+  .btn-primary:disabled,
+  .btn-primary.is-loading {
+    background-color: #357ABD;
+    cursor: not-allowed;
+  }
+  .btn-primary.btn-success {
+      background-color: #16a34a;
+  }
+
+  /* --- Animated login message --- */
+  .auth-message {
+    text-align: center;
+    font-weight: 500;
+    margin-top: 1rem;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .auth-message.show {
+    opacity: 1;
+  }
+  /* --- End of fix --- */
+
+  .toggle-link {
+    font-size: 0.875rem;
+    color: #cbd5e1;
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+  .toggle-link button {
+    background: none;
+    border: none;
+    padding: 0;
+    font-weight: 700;
+    color: #4A90E2;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .toggle-link button:hover {
+    color: #60a5fa;
+  }
+  
+  .home-link {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #e2e8f0;
+    text-decoration: none;
+    font-weight: 500;
+    z-index: 10;
+  }
+  .home-link:hover {
+    color: #fff;
+  }
+</style>
+</head>
+<body class="bg-background-dark font-display">
+<canvas id="particle-canvas"></canvas>
+
+<a href="index.html" class="home-link">
+  <span class="material-symbols-outlined">arrow_back_ios_new</span>
+  Back to Home
+</a>
+
+<div class="auth-wrapper">
+  
+  <div class="auth-flipper-container" id="flipper-container">
+    <div class="auth-flipper" id="flipper">
+
+      <div class="auth-form-front">
+        <form id="loginForm">
+          <div class="form-title">
+            <span class="material-symbols-outlined icon">login</span>
+            <span>Login</span>
+          </div>
+          <div class="input-group"> 
+            <label for="login-email" class="input-label">Email</label>
+            <input type="email" id="login-email" class="input-field" required placeholder="you@example.com">
+          </div>
+          <div class="input-group">
+            <label for="login-password" class="input-label">Password</label>
+            <input type="password" id="login-password" class="input-field" required placeholder="••••••••">
+          </div>
+          <button type="submit" id="loginSubmitBtn" class="btn-primary" style="margin-top: 2rem;">
+            Login
+          </button>
+          
+          <div id="loginMessage" class="auth-message"></div>
+          
+          <div class="toggle-link">
+            No account? 
+            <button type="button" id="show-signup">Sign Up Now</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="auth-form-back">
+        <form id="signupForm">
+          <div class="form-title">
+            <span class="material-symbols-outlined icon">person_add</span>
+            <span>Create Account</span>
+          </div>
+          <div class="input-group">
+            <label for="signup-name" class="input-label">Full Name</label>
+            <input type="text" id="signup-name" class="input-field" required placeholder="John Doe">
+          </div>
+          <div class="input-group">
+            <label for="signup-email" class="input-label">Email</label>
+            <input type="email" id="signup-email" class="input-field" required placeholder="you@example.com">
+          </div>
+          <div class="input-group">
+            <label for="signup-password" class="input-label">Password</label>
+            <input type="password" id="signup-password" class="input-field" required placeholder="••••••••">
+          </div>
+          <button type="submit" id="signupSubmitBtn" class="btn-primary" style="margin-top: 2rem;">
+            Create Account
+          </button>
+          
+          <div id="signupMessage" class="auth-message"></div>
+          
+          <div class="toggle-link">
+            Already a member? 
+            <button type="button" id="show-login">Login</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const canvasBg = document.getElementById('particle-canvas');
+  const ctx = canvasBg.getContext('2d');
+  function sizeCanvas(){ canvasBg.width = window.innerWidth; canvasBg.height = window.innerHeight; }
+  sizeCanvas();
+  let particles = []; const particleCount = 50;
+  class Particle {
+    constructor(){ this.x=Math.random()*canvasBg.width; this.y=Math.random()*canvasBg.height; this.size=Math.random()*2+1; this.speedX=Math.random()*0.5-0.25; this.speedY=Math.random()*0.5-0.25; this.color='rgba(74,144,226,'+(Math.random()*0.5+0.2)+')'; }
+    update(){ if(this.x>canvasBg.width||this.x<0) this.speedX*=-1; if(this.y>canvasBg.height||this.y<0) this.speedY*=-1; this.x+=this.speedX; this.y+=this.speedY; }
+    draw(){ ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill(); }
+  }
+  function init(){ particles=[]; for(let i=0;i<particleCount;i++){ particles.push(new Particle()); } }
+  function connect(){ let o=1; for(let a=0;a<particles.length;a++){ for(let b=a;b<particles.length;b++){ const dx=particles[a].x-particles[b].x; const dy=particles[a].y-particles[b].y; const d=Math.sqrt(dx*dx+dy*dy); if(d<120){ o=1-d/120; ctx.strokeStyle='rgba(74,144,226,'+(o*0.3)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(particles[a].x,particles[a].y); ctx.lineTo(particles[b].x,particles[b].y); ctx.stroke(); } } } }
+  function animate(){ ctx.clearRect(0,0,canvasBg.width,canvasBg.height); for(const p of particles){ p.update(); p.draw(); } connect(); requestAnimationFrame(animate); }
+  window.addEventListener('resize', ()=>{ sizeCanvas(); init(); });
+  init(); animate();
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // --- YOUR REAL FIREBASE KEYS ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPJIH_83r_6ImQ_Oa8JU3OVvMkw3I5Mmw",
+    authDomain: "mammocare-backend.firebaseapp.com",
+    projectId: "mammocare-backend",
+    storageBucket: "mammocare-backend.firebasestorage.app",
+    messagingSenderId: "187598388703",
+    appId: "1:187598388703:web:f6e442aa544953917e586a",
+    measurementId: "G-WRK53QYD0H"
+  };
+
+  // Initialize Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+</script>
+
+
+<script>
+  const flipperContainer = document.getElementById('flipper-container');
+  const showSignupBtn = document.getElementById('show-signup');
+  const showLoginBtn = document.getElementById('show-login');
+  
+  const loginForm = document.getElementById('loginForm');
+  const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+  const loginMessage = document.getElementById('loginMessage');
+
+  const signupForm = document.getElementById('signupForm');
+  const signupSubmitBtn = document.getElementById('signupSubmitBtn');
+  const signupMessage = document.getElementById('signupMessage');
+
+
+  // --- Logic for flipping the card ---
+  showSignupBtn.addEventListener('click', () => {
+    flipperContainer.classList.add('is-flipped');
+  });
+
+  showLoginBtn.addEventListener('click', () => {
+    flipperContainer.classList.remove('is-flipped');
+  });
+  
+  // ------------------------------------------------------------------
+  // --- LOGIC for SIGN UP (UPDATED to set 'role: patient') ---
+  // ------------------------------------------------------------------
+  signupForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('signup-name').value;
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+
+    // Disable button
+    signupSubmitBtn.disabled = true;
+    signupSubmitBtn.textContent = 'Creating...';
+    signupMessage.classList.remove('show');
+
+    auth.createUserWithEmailAndPassword(email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        
+        // 1. Update their Auth profile
+        return user.updateProfile({
+          displayName: name
+        }).then(() => {
+          // 2. Create their "role" document in Firestore (THIS IS CRITICAL)
+          return db.collection('users').doc(user.uid).set({
+            name: name,
+            email: email,
+            role: 'patient'
+          });
+        });
+      })
+      .then(() => {
+        signupMessage.textContent = 'Account created! Please log in.';
+        signupMessage.style.color = '#22c55e'; // Green color
+        signupMessage.classList.add('show');
+        
+        // Flip back to login after 2 seconds
+        setTimeout(() => {
+          flipperContainer.classList.remove('is-flipped');
+          signupForm.reset();
+          signupSubmitBtn.disabled = false;
+          signupSubmitBtn.textContent = 'Create Account';
+          signupMessage.classList.remove('show');
+        }, 2000);
+      })
+      .catch((error) => {
+        const errorMessage = error.message;
+        signupMessage.textContent = errorMessage;
+        signupMessage.style.color = '#ef4444'; // Red color
+        signupMessage.classList.add('show');
+        // Re-enable button
+        signupSubmitBtn.disabled = false;
+        signupSubmitBtn.textContent = 'Create Account';
+      });
+  });
+
+  // ------------------------------------------------------------------
+  // --- LOGIC for LOGIN (CORRECTED for Patient ONLY access) ---
+  // ------------------------------------------------------------------
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    // Disable button
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = 'Logging In...';
+    loginMessage.classList.remove('show');
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+        
+        // 1. Check user role: MUST be 'patient'
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        let redirectPage = 'login.html'; 
+        
+        if (userDoc.exists) {
+          const role = userDoc.data().role;
+          if (role === 'patient') {
+            redirectPage = 'dashboard.html';
+          } else {
+            // Role is 'doctor' or invalid/missing. Sign them out.
+            await auth.signOut();
+            throw new Error("Access Denied. Please use the Doctor Portal link.");
+          }
+        } else {
+          // User exists in Auth but not in 'users' collection. Sign them out.
+          await auth.signOut();
+          throw new Error("Account setup error. Please sign up or contact support.");
+        }
+        
+        // 2. Success Animation & Redirect
+        loginSubmitBtn.textContent = 'Success!';
+        loginSubmitBtn.classList.add('btn-success');
+        
+        loginMessage.textContent = 'Redirecting to your patient dashboard...';
+        loginMessage.style.color = '#22c55e'; // Green
+        loginMessage.classList.add('show');
+
+        // Redirect after 1.5 seconds
+        setTimeout(() => {
+          window.location.href = redirectPage;
+        }, 1500);
+      })
+      .catch(async (error) => {
+        let errorMessage = error.message;
+        
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            errorMessage = 'Invalid email or password.';
+        }
+        
+        // Catch the custom error from the role check above
+        if (errorMessage.includes("Access Denied") || errorMessage.includes("Account setup error")) {
+            errorMessage = "Access Denied. If you are a doctor, please use the Doctor Portal link provided by the admin. Otherwise, please sign up or contact support.";
+        }
+        
+        loginMessage.textContent = errorMessage;
+        loginMessage.style.color = '#ef4444'; // Red
+        loginMessage.classList.add('show');
+        
+        // Re-enable button
+        loginSubmitBtn.disabled = false;
+        loginSubmitBtn.textContent = 'Login';
+        loginSubmitBtn.classList.remove('btn-success');
+      });
+  });
+</script>
+
+</body>
+</html>
